@@ -21,7 +21,7 @@ uint8_t recvBufLen = sizeof(recvBuf);
 uint8_t fromAddr;
 uint8_t data[256];
 uint8_t maxAddrFound = 1;
-uint8_T directConnectNodes[256]; // addresses of all nodes directly connected to this node
+uint8_t directConnectNodes[256]; // addresses of all nodes directly connected to this node
 uint8_t directConnectNodesStaleness[256];
 uint8_t directConnectNodesCount = 0;
 uint8_t toAddr;
