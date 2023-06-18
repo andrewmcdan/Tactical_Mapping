@@ -1,4 +1,8 @@
 Data to send in each packet 
+    - Packet type byte
+        - 0xf0 - message packet
+        - 0x0f - Mesh status packet
+            - In the case of a Mesh status packet, the data and handling of this packet will differ from message packets.
     - Originating address
         - This is the address of the node that creates the original packet. Each repeating node will not change this.
     - Message sequence number. 
@@ -29,7 +33,7 @@ Messages should contain the following info:
     - Message type
         - Location update
         - Dropped pin update
-        - Request for repeater action
+        - Request for repeater action i.e. turn on / flash LED on repeater, chirp, etc.
         - etc
     - Node list 
         - This is a list of the addresses of all the nodes this message has passed through. 
@@ -37,3 +41,29 @@ Messages should contain the following info:
         - If this node's address is not in the list, add it and retransmit
     - The data
 
+Packet structure, mesh status packet:
+Byte 0x00:
+    - Packet type - 0x0f (mesh status packet)
+Byte 0x01:
+    - Max address - Indicates highest address within the mesh
+
+Packet structure, message packet:
+byte 1:
+    - Packet type - 0xf0 (message type packet)
+byte 2:
+    - Originating address
+byte 3:
+    - Message sequence number
+Byte 4:
+    - Packet sequence number
+Byte 5:
+    - Message start / continue / end
+Bytes 6 - 251
+    - data - up to 245 bytes of data
+
+
+In order for all of this work, the feather M0 will have to be assisted by a Teensy 4.1. A Teensy will be used since it has PSRAM capabilities which increase its RAM 
+significantly. The Teensy with be the main processor that facilitates communication between the Bluetooth module, the Feather / LoRa radio, the GPS module, and the 
+user / OLED / rotary encoder. Messages are considered high level and will be built and decoded on the Teensy while packet level stuff will happen on the Feather. 
+The Teensy will break the messages down into packets and send them to the Feather for transmission. When the Feather gets a new packet, it simply sends it on to the 
+Teensy after verifying that the packet shouldn't be ignored as a result of a reflection (when a nearby node retransmits a message that this node just sent out.) 
