@@ -4,7 +4,8 @@
             "name": "Win32",
             "includePath": [
                 "${workspaceFolder}/**",
-                "${workspaceFolder/../../libraries/**"
+                "${workspaceFolder/../../libraries/**",
+                "E:\\Program Files (x86)\\Arduino\\**"
                 
             ],
             "defines": [

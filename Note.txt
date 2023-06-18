@@ -1,0 +1,39 @@
+Data to send in each packet 
+    - Originating address
+        - This is the address of the node that creates the original packet. Each repeating node will not change this.
+    - Message sequence number. 
+        - Each node will send a number that is unique to each packet from that node with every packet that originates from it.
+    - Packet sequence number
+        - Each message will broken up into packets that can be delivered over the air. In order to ensure that the entre packet gets
+          delivered before trying to interpret the message. If part of the message is lost, the receiving node can request a retransmit. 
+    - Message start / continue / end
+        - For one packet messages, start and end will be OR'ed together i.e. 0xf0 || 0x0f
+    
+    With the above information, every packet should be unique and every message should be unique. 
+
+Messages are made up of packets. Each message get a unique sequence number that gets transmitted in each packet. 
+Packets are RH_RF95_MAX_MESSAGE_LEN (251) long. Messages can be as long as needed but data should be streamed from the source 
+    in order to minimize the RAM footprint.
+
+When receiving a packet, first check the originating address. If it is the same as the address on the receiving node, ignore the packet
+    since this is a rebound from an adjacent node. 
+
+Next check the sequence number. Each node should keep track of the last few sequence numbers from other nodes. If a duplicate sequence number
+    is found, and this is the first packet of a message, ignore the message since this node has already seen this message.
+
+Now check the packet sequence number. If we are just starting to read a message, where the message sequence number is new to this node, make
+    sure the packet sequence number is 0. Also check for message start byte. Then continue listening for packets and checking message and packet sequence numbers to ensure we
+    get the entire message. When we get the message end byte, interpret the message. 
+
+Messages should contain the following info:
+    - Message type
+        - Location update
+        - Dropped pin update
+        - Request for repeater action
+        - etc
+    - Node list 
+        - This is a list of the addresses of all the nodes this message has passed through. 
+        - If this node finds its address in this list, do not retransmit
+        - If this node's address is not in the list, add it and retransmit
+    - The data
+

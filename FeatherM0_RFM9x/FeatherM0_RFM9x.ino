@@ -1,6 +1,8 @@
+#include <arduino.h>
 #include <SPI.h>
 #include <RH_RF95.h>
 #include <RHDatagram.h>
+
 
 // #elif defined(ADAFRUIT_FEATHER_M0) || defined(ADAFRUIT_FEATHER_M0_EXPRESS) || defined(ARDUINO_SAMD_FEATHER_M0)  // Feather M0 w/Radio
 #define RFM95_CS    8
