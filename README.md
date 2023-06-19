@@ -8,6 +8,8 @@ This repo contains the code that runs on the microcontrollers that are part of m
 ### Teensy 4.1
 - Main microcontroller that facilitates communications between all the modules
 - Provide UI via OLED screen with a rotary encoder for input
+- Communicates with OLED via I2C
+- Communicates with GPS module via serial UART with CTS/RTS line
 
 ## Project Status
 Currently all code is alpha level / initial experimentation.
