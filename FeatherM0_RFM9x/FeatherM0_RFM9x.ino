@@ -218,11 +218,11 @@ void loop() {
     if(digitalRead(TEENSY_IRQ_IN) == HIGH){
         Serial.println("Teensy has an interrupt");
         Serial1.println("ready");
-        uint8_t dataInBuf[RH_MAX_MESSAGE_LEN];
-        uint8_t dataInBufLen = 0;
+        uint8_t dataInBuf[RH_RF95_MAX_MESSAGE_LEN + 32];
+        uint16_t dataInBufLen = 0;
         uint16_t waitCount = 0;
         // wait for Teensy to be ready and to send some data
-        while(Serial1.available() || digitalRead(TEENSY_IRQ_IN) == HIGH{
+        while(Serial1.available() || digitalRead(TEENSY_IRQ_IN) == HIGH){
             // if the Teensy is ready, read the data
             while(!Serial1.available()){
                 waitCount++;
@@ -239,9 +239,43 @@ void loop() {
         }
         if(dataInBufLen > 0){
             Serial.println("Data received from Teensy: ");
-            Serial.println(dataInBuf, dataInBufLen);
+            
             // Now we need to interpret the data
+            // the data is sent as a packet with the following format:
+            // message:len=length:data=data
+            // where:
+            // length - the length of the data as a string
+            // data - the data of the message as raw bytes
 
+            // split the dataInBuf array into a length string
+            String lengthStr = "";
+            uint8_t indexOfData = 0;
+            while(dataInBuf[indexOfData] != '='){
+                indexOfData++;
+            }
+            indexOfData++;
+            while(dataInBuf[indexOfData] != ':'){
+                lengthStr += dataInBuf[indexOfData];
+                indexOfData++;
+            }
+            indexOfData++;
+            while(dataInBuf[indexOfData] != '='){
+                indexOfData++;
+            }
+            indexOfData++; // this should now be the start of the data
+
+            for(uint8_t i = 0; i < indexOfData; i++){
+                Serial.print((char)dataInBuf[i]);
+            }
+            Serial.println("..."); // print an ellipsis to show that there is more data
+
+            uint16_t length = lengthStr.toInt();
+
+            // now send the data to the mesh
+            Serial.println("Sending data to mesh...");
+            if(!radio.sendto((uint8_t *)dataInBuf + indexOfData, length, RH_BROADCAST_ADDRESS)){
+                Serial.println("Failed to send data to mesh");
+            }
         }
     }
 
