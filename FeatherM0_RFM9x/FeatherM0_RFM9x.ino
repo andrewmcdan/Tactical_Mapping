@@ -187,7 +187,7 @@ void loop() {
         measuredvbat *= 3.3;  // Multiply by 3.3V, our reference voltage
         measuredvbat /= 1024; // convert to voltage
 
-        if(measuredvbat < 3.40){
+        if(measuredvbat < 3.40){ // if the battery voltage is below 3.4V, stop the module and turn off the battery
             Serial.println("Battery voltage is low. Stopping.");
             Serial1.println("x2");
             sendDataToTeensy("vbat:low");
