@@ -1,3 +1,15 @@
+///TODO: need to read a pin to determine if the module should be active or not.
+///     if the pin is low, then the module should be active. If the pin is high, then the module should be inactive.
+///     this will allow the module to be turned off when not in use, saving power and allowing the battery to charge faster.
+///     the pin should be read in the setup() function and then the module should be turned on or off based on the value of the pin.
+///     off will basically just mean sleeping, but the module will still be powered.
+
+///TODO: if the battery level gets too low, the module should be turned off to prevent the battery from being damaged.
+
+///TODO: need to be able to disconnect the battery from the module when it gets too low with a way to reconnect when power
+///     is applied to the USB port.
+
+
 #include <arduino.h>
 #include <SPI.h>
 #include <RH_RF95.h>
@@ -15,6 +27,8 @@
 #define TEENSY_IRQ_OUT 11 // this is the pin that the Feather will use to tell the Teensy that it has data to send
 
 #define VBATPIN A7 // this is the pin that the Feather will use to read the battery voltage
+
+#define BATT_RELAY_PIN 10 // this is the pin that the Feather will use to turn the battery relay on and off
 
 #define MESH_STATUS_LENGTH 2 // the length of the mesh status packet
 #define MESH_STATUS_PACKET_TYPE 0x0f
@@ -41,6 +55,8 @@ unsigned long timeSinceLastBattUpdate = millis(); // this is the time since the 
 
 void setup() {
     // Setup the pins
+    pinMode(BATT_RELAY_PIN, OUTPUT);
+    digitalWrite(BATT_RELAY_PIN, HIGH); 
     pinMode(LED_BUILTIN, OUTPUT);
     pinMode(TEENSY_IRQ_IN, INPUT);
     pinMode(TEENSY_IRQ_OUT, OUTPUT);
@@ -170,6 +186,14 @@ void loop() {
         measuredvbat *= 2;    // we divided by 2, so multiply back
         measuredvbat *= 3.3;  // Multiply by 3.3V, our reference voltage
         measuredvbat /= 1024; // convert to voltage
+
+        if(measuredvbat < 3.40){
+            Serial.println("Battery voltage is low. Stopping.");
+            Serial1.println("x2");
+            sendDataToTeensy("vbat:low");
+            digitalWrite(BATT_RELAY_PIN, LOW); // turn off the battery
+            while(1){}
+        }
         Serial.print("VBat: " ); // debug
         Serial.println(measuredvbat); // debug
         if(!sendDataToTeensy("vbat:" + String(measuredvbat))){ // send the data to the Teensy
