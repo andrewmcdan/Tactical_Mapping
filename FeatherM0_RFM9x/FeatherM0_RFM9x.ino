@@ -8,15 +8,15 @@
 #define RFM95_CS    8
 #define RFM95_INT   3
 #define RFM95_RST   4
-#define RF95_FREQ 915.0
+#define RF95_FREQ 915.0 // Mhz. Match this with the version of your radio module!
 
 // Teensy connection
-#define TEENSY_IRQ_IN 12
-#define TEENSY_IRQ_OUT 11
+#define TEENSY_IRQ_IN 12 // this is the pin that the Teensy will use to tell the Feather that it has data to send
+#define TEENSY_IRQ_OUT 11 // this is the pin that the Feather will use to tell the Teensy that it has data to send
 
-#define VBATPIN A7
+#define VBATPIN A7 // this is the pin that the Feather will use to read the battery voltage
 
-#define MESH_STATUS_LENGTH 2
+#define MESH_STATUS_LENGTH 2 // the length of the mesh status packet
 #define MESH_STATUS_PACKET_TYPE 0x0f
 #define MESSAGE_PACKET_TYPE 0xf0
 #define REPEATER_ACTION_REQUEST_PACKET_TYPE 0xa0
@@ -26,18 +26,18 @@ RH_RF95 rf95(RFM95_CS, RFM95_INT);
 
 RHDatagram radio(rf95); // starts datagram manager with default address of 0
 
-uint8_t recvBuf[RH_RF95_MAX_MESSAGE_LEN];
-uint8_t recvBufLen = sizeof(recvBuf);
-uint8_t fromAddr;
-uint8_t dataOutBuf[RH_RF95_MAX_MESSAGE_LEN];
-uint8_t maxAddrFound = 1;
-uint8_t toAddr;
-uint8_t recvFromId;
-uint8_t recvFlags;
-unsigned long loopStart = millis();
-unsigned long loopEnd = millis();
-unsigned long timeSinceMeshUpdate = millis();
-unsigned long timeSinceLastBattUpdate = millis();
+uint8_t recvBuf[RH_RF95_MAX_MESSAGE_LEN]; // this is the buffer that the radio will use to store incoming messages
+uint8_t recvBufLen = sizeof(recvBuf); // this is the length of the buffer that the radio will use to store incoming messages
+uint8_t fromAddr; // this is the address of the node that sent the message
+uint8_t dataOutBuf[RH_RF95_MAX_MESSAGE_LEN]; // this is the buffer that the radio will use to store outgoing messages
+uint8_t maxAddrFound = 1; // this is the highest address that has been found on the mesh
+uint8_t toAddr; // this is the address that the message is being sent to
+uint8_t recvFromId; // this is the id of the node that sent the message
+uint8_t recvFlags; // these are the flags that were set when the message was sent
+unsigned long loopStart = millis(); // this is the time that the loop started
+unsigned long loopEnd = millis(); // this is the time that the loop ended
+unsigned long timeSinceMeshUpdate = millis(); // this is the time since the last mesh update was received
+unsigned long timeSinceLastBattUpdate = millis(); // this is the time since the last battery update was sent
 
 void setup() {
     // Setup the pins
