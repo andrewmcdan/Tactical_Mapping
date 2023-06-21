@@ -12,7 +12,9 @@
 
 // Teensy connection
 #define TEENSY_IRQ_IN 12
-#define TEENSY_IRQ_OUT 13
+#define TEENSY_IRQ_OUT 11
+
+#define VBATPIN A7
 
 #define MESH_STATUS_LENGTH 2
 #define MESH_STATUS_PACKET_TYPE 0x0f
@@ -32,8 +34,13 @@ uint8_t maxAddrFound = 1;
 uint8_t toAddr;
 uint8_t recvFromId;
 uint8_t recvFlags;
+unsigned long loopStart = millis();
+unsigned long loopEnd = millis();
+unsigned long timeSinceMeshUpdate = millis();
+unsigned long timeSinceLastBattUpdate = millis();
 
 void setup() {
+    // Setup the pins
     pinMode(LED_BUILTIN, OUTPUT);
     pinMode(TEENSY_IRQ_IN, INPUT);
     pinMode(TEENSY_IRQ_OUT, OUTPUT);
@@ -42,9 +49,10 @@ void setup() {
     pinMode(RFM95_RST, OUTPUT);
     digitalWrite(RFM95_RST, HIGH);
     delay(100);
+    // setup the serial ports
     Serial.begin(115200);
     Serial1.begin(115200);
-    while (!Serial) delay(1);
+    while (!Serial) delay(1); // wait for serial port to connect. Needed for native USB
     Serial1.println("booting");
     Serial.println("Booting...");
     delay(100);
@@ -56,7 +64,7 @@ void setup() {
     delay(100);
     Serial.println("Radio reset complete.");
     Serial.println("Init radio using datagram manager...");
-    while (!radio.init()) {
+    if (!radio.init()) {
         Serial.println("LoRa radio init failed... stopping.");
         Serial1.println("x1");
         while (1);
@@ -69,12 +77,11 @@ void setup() {
     }
     Serial.print("Freq set to: ");
     Serial.println(RF95_FREQ);
-
     Serial.println("Adjusting modem mode...");
     if (!rf95.setModemConfig(RH_RF95::ModemConfigChoice::Bw125Cr45Sf128)) {//< Bw = 125 kHz, Cr = 4/5, Sf = 128chips/symbol, CRC on. Default medium range
         Serial.println("Modem mode set failed... stopping.");
         Serial1.println("x3l");
-        while (1) {}
+        while (1);
     }
     Serial.println("Successfully set modem config");
     Serial.print("Setting tramsit power...");
@@ -108,13 +115,16 @@ void setup() {
                 Serial1.println("addr=" + String(maxAddrFound));
                 radio.setThisAddress(maxAddrFound);
                 meshStatusRecvd = true;
+            }else{
+                Serial.println("Received packet was not a mesh status update. Ignoring.");
+                Serial.println("Waiting for another packet...");
             }
             if(!meshStatusRecvd){
                 // waiting for another packet
                 // This has a long timeout because in the case where this code gets executed,
                 // this node is simply waiting for a mesh Status update.
                 if(!radio.waitAvailableTimeout(60000)){
-                    Serial.println("No mesh status update received after 60 seconds. Stopping.");
+                    Serial.println("No more packets received after 60 seconds. Stopping.");
                     Serial1.println("x4");
                     while(1){}
                 }
@@ -132,29 +142,49 @@ void setup() {
     Serial.println("Waiting for Teensy to finish setup...");
     while (digitalRead(TEENSY_IRQ_IN) == HIGH) {}
     digitalWrite(TEENSY_IRQ_OUT, HIGH);
-    Serial.println("Setup complete complete. Continuing.");
+    Serial.println("Teensy setup complete. Continuing.");
+    Serial.println("Feather setup complete. Continuing.");
 }
 
 void loop() {
-    unsigned long loopStart = millis();
+    loopStart = millis();
     // first thing to do is send out a broadcast that indicates basic mesh status.
     // each node should do this so that in the event a segment of the mesh gets seperated,
     // and another node connects to the seperated section, all nodes will connect with
     // no overlapping addresses.
     // maxAddrFound - the highest addr of all the nodes
     uint8_t dataOutBufLen = 0;
-    dataOutBuf[dataOutBufLen++] = MESH_STATUS_PACKET_TYPE; // mesh status flag
-    dataOutBuf[dataOutBufLen++] = maxAddrFound;
-    radio.sendto(dataOutBuf, MESH_STATUS_LENGTH, RH_BROADCAST_ADDRESS);
-    dataOutBufLen = 0; // reset the dataOutBufLen
+    if(millis() - timeSinceMeshUpdate > 5000){ // Only send out a mesh update every 5 seconds
+        timeSinceMeshUpdate = millis(); // reset the timer
+        dataOutBuf[dataOutBufLen++] = MESH_STATUS_PACKET_TYPE; // mesh status flag
+        dataOutBuf[dataOutBufLen++] = maxAddrFound; // the max address found
+        Serial.println("Broadcasting mesh update..."); // debug
+        radio.sendto(dataOutBuf, MESH_STATUS_LENGTH, RH_BROADCAST_ADDRESS); // send the packet
+        dataOutBufLen = 0; // reset the dataOutBufLen
+    }
+
+    // next thing to do is to send the battery voltage every 30 seconds to the Teensy
+    if(millis() - timeSinceLastBattUpdate > 30000){
+        timeSinceLastBattUpdate = millis(); // reset the timer
+        float measuredvbat = analogRead(VBATPIN); // read the battery voltage
+        measuredvbat *= 2;    // we divided by 2, so multiply back
+        measuredvbat *= 3.3;  // Multiply by 3.3V, our reference voltage
+        measuredvbat /= 1024; // convert to voltage
+        Serial.print("VBat: " ); // debug
+        Serial.println(measuredvbat); // debug
+        if(!sendDataToTeensy("vbat:" + String(measuredvbat))){ // send the data to the Teensy
+            Serial.println("Error sending vbat data to Teensy"); // debug
+        }
+    }
 
     // then receive any messages on the waves...
     // if a message is received, send it to the Teensy.
     // There is a 1 second timeout on the waitAvailableTimeout function so if the
     // message is not received, the code will just keep looping.
-    if(radio.waitAvailableTimeout(1000)){
-        radio.recvfrom(recvBuf, &recvBufLen, &fromAddr, &toAddr, &recvFromId, &recvFlags);
-        Serial.print("Received data from: 0x");
+    if(radio.available()){
+    //if(radio.waitAvailableTimeout(500)){
+        radio.recvfrom(recvBuf, &recvBufLen, &fromAddr, &toAddr, &recvFromId, &recvFlags); // receive the data
+        Serial.print("Received data from: 0x"); // debug
         Serial.println(fromAddr, HEX);
         Serial.print("To: 0x");
         Serial.println(toAddr, HEX);
@@ -162,13 +192,33 @@ void loop() {
         Serial.println(recvFromId, HEX);
         Serial.print("Flags: 0x");
         Serial.println(recvFlags, HEX);
-        if (recvBufLen == MESH_STATUS_LENGTH && recvBuf[0] == MESH_STATUS_PACKET_TYPE && toAddr == RH_BROADCAST_ADDRESS) {
-            Serial.println("Mesh status update received. Updating max addr");
+        if (recvBufLen == MESH_STATUS_LENGTH && recvBuf[0] == MESH_STATUS_PACKET_TYPE && toAddr == RH_BROADCAST_ADDRESS) { // if the packet is a mesh status update
+            Serial.println("Mesh status update received. Updating max addr"); // debug
             Serial.print("Max address: 0x");
             Serial.println(recvBuf[1], HEX);
             // if the new max addr is greater than the current max addr, update it
             if(recvBuf[1] > maxAddrFound){
                 maxAddrFound = recvBuf[1];
+            }
+            
+            // need to send an update to the Teensy about RSSI and SNR
+            int16_t rssi = rf95.lastRssi(); // get the RSSI of the last packet received
+            int snr = rf95.lastSNR(); // get the SNR of the last packet received
+            Serial.print("RSSI: "); // debug
+            Serial.println(rssi);
+            Serial.print("SNR: ");
+            Serial.println(snr);
+            // send the message to the Teensy
+            // the message is sent as a packet with the following format:
+            // meshStatusUpdate:rssi=rssi:snr=snr
+            // where:
+            // rssi - the RSSI of the last packet received
+            // snr - the SNR of the last packet received
+            // the message is sent to the Teensy as a packet.
+            // the Teensy will decide what to do with the message.
+            Serial.println("Sending mesh status update to Teensy...");
+            if(!sendDataToTeensy("meshStatusUpdate:rssi=" + String(rssi) + ":snr=" + String(snr))){ // send the data to the Teensy
+                Serial.println("Error sending mesh status update to Teensy");
             }
         }else if(recvBuf[0] == (MESH_STATUS_PACKET_TYPE & REPEATER_ACTION_REQUEST_PACKET_TYPE)  && toAddr == RH_BROADCAST_ADDRESS){ // repeater action request packet received
             // send the message to the Teensy
@@ -227,10 +277,11 @@ void loop() {
             while(!Serial1.available()){
                 waitCount++;
                 delay(10);
-                if(waitCount > 1000){
+                if(waitCount > 100){
                     // if we get here there was a timeout waiting for data and both micros should abort
                     Serial.println("Timeout waiting for Teensy data");
                     Serial1.println("xxxxxxx");
+                    break;
                 }
             }
             if(Serial1.available()){
@@ -280,43 +331,46 @@ void loop() {
     }
 
     // wait for a second before looping again 
-    unsigned long loopEnd = millis();
-    if(loopEnd - loopStart < 1000){
-        delay(1000 - (loopEnd - loopStart));
+    loopEnd = millis();
+    if(loopEnd - loopStart < 100){
+        delay(100 - (loopEnd - loopStart));
     }
 }
 
 bool sendDataToTeensy(String data){
-    Serial.println("Sending data to Teensy...");
-    String dataInStr = "";
-    uint16_t waitCount = 0;
-    digitalWrite(TEENSY_IRQ_OUT, LOW);
+    Serial.println("Sending data to Teensy..."); // debug
+    String dataInStr = ""; // the data received from the Teensy
+    uint16_t waitCount = 0; // the number of times we have waited for the Teensy to be ready
+    digitalWrite(TEENSY_IRQ_OUT, LOW); // set the Teensy IRQ pin to low to tell the Teensy that we are ready to send data
     // wait for Teensy to be ready
-    while(!Serial1.available()){
-        delay(10);
-        waitCount++;
-        if(waitCount > 1000){
-            digitalWrite(TEENSY_IRQ_OUT, HIGH);
-            return false;
+    while(!Serial1.available()){ // wait for the Teensy to send "ready"
+        delay(10); // wait 10ms
+        waitCount++; // increment the wait count
+        if(waitCount > 100){ // if we have waited for 1 second
+            digitalWrite(TEENSY_IRQ_OUT, HIGH); // set the Teensy IRQ pin to high to tell the Teensy that we are not ready to send data
+            return false; // return false to indicate that we failed to send the data
         }
     }
     
-    while(Serial1.available()){
-        dataInStr += Serial1.read();
-        if(dataInStr.length() > 5){
+    while(Serial1.available()){ // while there is data available from the Teensy
+        dataInStr += Serial1.read(); // read the data and add it to the dataInStr string
+        if(dataInStr.length() > 5){ // if the dataInStr string is longer than 5 characters
             digitalWrite(TEENSY_IRQ_OUT, HIGH);
-            return false;
+            return false; // return false to indicate that we failed to send the data
         }
     }
     if(dataInStr == "ready"){
-        Serial1.println(data);
-        Serial.println("Data sent to Teensy");
+        // if we get here, the Teensy is ready to receive data
+        Serial1.println(data); // send the data to the Teensy
+        Serial.println("Data sent to Teensy"); // debug
     }
+    // set the Teensy IRQ pin to high to tell the Teensy that we are not ready to send data
     digitalWrite(TEENSY_IRQ_OUT, HIGH);
+    // return true to indicate that we successfully sent the data
     return true;
 }
 
-bool sendDataToTeensy(uint8_t *data, uint8_t len){
+bool sendDataToTeensy(uint8_t *data, uint8_t len){ // a version of the sendDataToTeensy function that takes a uint8_t array and a length
     Serial.println("Sending data to Teensy...");
     String dataInStr = "";
     uint16_t waitCount = 0;
@@ -325,7 +379,7 @@ bool sendDataToTeensy(uint8_t *data, uint8_t len){
     while(!Serial1.available()){
         delay(10);
         waitCount++;
-        if(waitCount > 1000){
+        if(waitCount > 100){
             digitalWrite(TEENSY_IRQ_OUT, HIGH);
             return false;
         }
