@@ -20,6 +20,8 @@
 #include <Encoder.h>
 // adafruit bluefruit library
 #include <Adafruit_BLE.h>
+#include <Adafruit_BluefruitLE_UART.h>
+
 
 #define LED 13
 #define OLED_SDA 0
@@ -39,6 +41,9 @@
 #define BT_RST 25
 #define BT_INT 26
 
+#define FEATHER_IRQ_IN 12
+#define FEATHER_IRQ_OUT 11 
+
 SSD1306 display(128, 64, &Wire, OLED_SDA, OLED_SCL);
 Adafruit_GPS GPS(&Serial1);
 Timezone tz;
@@ -50,7 +55,21 @@ Encoder encoder(ENCODER_A, ENCODER_B);
 setup(){
     pinMode(LED, OUTPUT);
     digitalWrite(LED, HIGH);
+    pinMode(GPS_RST, OUTPUT);
+    digitalWrite(GPS_RST, HIGH);
+    pinMode(GPS_INT, INPUT);
+    pinMode(ENCODER_SW, INPUT);
+    digitalWrite(ENCODER_SW, HIGH);
+    pinMode(BT_RST, OUTPUT);
+    digitalWrite(BT_RST, HIGH);
+    pinMode(BT_INT, INPUT);
+    pinMode(FEATHER_IRQ_IN, INPUT);
+    pinMode(FEATHER_IRQ_OUT, OUTPUT);
+    digitalWrite(FEATHER_IRQ_OUT, HIGH);
+    // initialize the serial ports
     Serial.begin(115200);
+    Serial1.begin(9600);
+    Serial2.begin(9600);
     Serial.println("Starting...");
     Serial.println("Done.");
     digitalWrite(LED, LOW);
