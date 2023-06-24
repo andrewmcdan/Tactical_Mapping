@@ -3,20 +3,24 @@
         {
             "name": "Win32",
             "includePath": [
+                "N:\\Arduino15\\packages\\adafruit\\hardware\\samd\\1.7.12\\**",
+                "N:\\Arduino15\\packages\\adafruit\\hardware\\samd\\1.7.12\\**",
+                "N:\\Arduino15\\packages\\adafruit\\hardware\\samd\\1.7.12\\**\\**",
+                "N:\\Arduino15\\packages\\adafruit\\hardware\\samd\\1.7.12\\**\\**\\**",
                 "${workspaceFolder}/**",
-                "${workspaceFolder/../../libraries/**",
-                "E:\\Program Files (x86)\\Arduino\\**"
+                "${workspaceFolder/../../libraries/**"
                 
             ],
             "defines": [
                 "_DEBUG",
                 "UNICODE",
-                "_UNICODE"
+                "_UNICODE",
+                "_VARIANT_ARDUINO_ZERO_"
             ],
             "windowsSdkVersion": "10.0.22000.0",
-            "compilerPath": "cl.exe",
             "cStandard": "c17",
-            "cppStandard": "c++17"
+            "cppStandard": "c++17",
+            "intelliSenseMode": "windows-clang-arm64"
         }
     ],
     "version": 4

@@ -10,11 +10,13 @@
 ///     is applied to the USB port.
 
 
-#include <arduino.h>
+
+#include <Arduino.h>
 #include <SPI.h>
 #include <RH_RF95.h>
 #include <RHDatagram.h>
 
+#define MODULE_STARTUP_WAIT_TIME 15
 
 // Feather M0 w/Radio
 #define RFM95_CS    8
@@ -29,6 +31,8 @@
 #define VBATPIN A7 // this is the pin that the Feather will use to read the battery voltage
 
 #define BATT_RELAY_PIN 10 // this is the pin that the Feather will use to turn the battery relay on and off
+
+#define DEBUG_ENABLE_PIN 6 // this is the pin that the Feather will use to determine if debug mode should be enabled
 
 #define MESH_STATUS_LENGTH 2 // the length of the mesh status packet
 #define MESH_STATUS_PACKET_TYPE 0x0f
@@ -52,12 +56,29 @@ unsigned long loopStart = millis(); // this is the time that the loop started
 unsigned long loopEnd = millis(); // this is the time that the loop ended
 unsigned long timeSinceMeshUpdate = millis(); // this is the time since the last mesh update was received
 unsigned long timeSinceLastBattUpdate = millis(); // this is the time since the last battery update was sent
+//TODO: remove debug flag
+bool debugEnabled = false; // this is the flag that determines if debug mode is enabled or not
 
 void setup() {
-    // Setup the pins
+    pinMode(LED_BUILTIN, OUTPUT);
+    uint8_t waitCount_ = 0;
+    // Give the other modules time to start up
+    while(waitCount_ < MODULE_STARTUP_WAIT_TIME){
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(500);
+        digitalWrite(LED_BUILTIN, LOW);
+        delay(500);
+        waitCount_++;
+    }
+    String dataToSendToTeensy = "";
+    // Setup and read the debug enable pin
+    pinMode(DEBUG_ENABLE_PIN, INPUT);
+    if(digitalRead(DEBUG_ENABLE_PIN) == LOW) {
+        debugEnabled = true;
+    }
+    // Setup the rest of the pins
     pinMode(BATT_RELAY_PIN, OUTPUT);
     digitalWrite(BATT_RELAY_PIN, HIGH); 
-    pinMode(LED_BUILTIN, OUTPUT);
     pinMode(TEENSY_IRQ_IN, INPUT);
     pinMode(TEENSY_IRQ_OUT, OUTPUT);
     digitalWrite(TEENSY_IRQ_OUT, HIGH);
@@ -66,11 +87,12 @@ void setup() {
     digitalWrite(RFM95_RST, HIGH);
     delay(100);
     // setup the serial ports
-    Serial.begin(115200);
     Serial1.begin(115200);
-    while (!Serial) delay(1); // wait for serial port to connect. Needed for native USB
-    Serial1.println("booting");
-    Serial.println("Booting...");
+    if(debugEnabled){
+        Serial.begin(115200);
+        while (!Serial) delay(1); // wait for serial port to connect. Needed for native USB
+        Serial.println("Booting...");
+    }
     delay(100);
     Serial.println("Reset radio...");
     // manual reset
@@ -82,13 +104,14 @@ void setup() {
     Serial.println("Init radio using datagram manager...");
     if (!radio.init()) {
         Serial.println("LoRa radio init failed... stopping.");
-        Serial1.println("x1");
+        dataToSendToTeensy = dataToSendToTeensy + "x1";
         while (1);
     }
     Serial.println("LoRa radio init OK!");
     if (!rf95.setFrequency(RF95_FREQ)) {
         Serial.println("setFrequency failed... stopping");
-        Serial1.println("x2");
+        //Serial1.println("x2");
+        dataToSendToTeensy = dataToSendToTeensy + "x2";
         while (1);
     }
     Serial.print("Freq set to: ");
@@ -96,7 +119,8 @@ void setup() {
     Serial.println("Adjusting modem mode...");
     if (!rf95.setModemConfig(RH_RF95::ModemConfigChoice::Bw125Cr45Sf128)) {//< Bw = 125 kHz, Cr = 4/5, Sf = 128chips/symbol, CRC on. Default medium range
         Serial.println("Modem mode set failed... stopping.");
-        Serial1.println("x3l");
+        //Serial1.println("x3");
+        dataToSendToTeensy = dataToSendToTeensy + "x3";
         while (1);
     }
     Serial.println("Successfully set modem config");
@@ -106,7 +130,8 @@ void setup() {
     Serial.println("Start to find other nodes...");
     if (!radio.waitAvailableTimeout(30000)) { // if after 30 seconds nothing is received, assume there is no mesh
         Serial.println("No other nodes found. Setting address = 1");
-        Serial1.println("addr=1");
+        //Serial1.println("addr=1");
+        dataToSendToTeensy = dataToSendToTeensy + "addr=1";
         radio.setThisAddress(1);
     } else {
         // we need to get a mesh status update in order to set this node's address, so keep looping until one comes in
@@ -128,7 +153,8 @@ void setup() {
                 Serial.print("Max address found: 0x");
                 Serial.println(recvBuf[1], HEX);
                 maxAddrFound = recvBuf[1] + 1;
-                Serial1.println("addr=" + String(maxAddrFound));
+                //Serial1.println("addr=" + String(maxAddrFound));
+                dataToSendToTeensy = dataToSendToTeensy + "addr=" + String(maxAddrFound);
                 radio.setThisAddress(maxAddrFound);
                 meshStatusRecvd = true;
             }else{
@@ -141,7 +167,8 @@ void setup() {
                 // this node is simply waiting for a mesh Status update.
                 if(!radio.waitAvailableTimeout(60000)){
                     Serial.println("No more packets received after 60 seconds. Stopping.");
-                    Serial1.println("x4");
+                    //Serial1.println("x4");
+                    dataToSendToTeensy = dataToSendToTeensy + "x4";
                     while(1){}
                 }
             }
@@ -154,10 +181,21 @@ void setup() {
 
     // if the Teensy gets through its setup, it will set the IRQ pin to low and
     // wait for the Feather to set its IRQ pin to low.
+    Serial.println("Give the Teensy time to start...");
+    delay(10000); // give the Teensy time to start up
     digitalWrite(TEENSY_IRQ_OUT, LOW);
+    delay(100);
     Serial.println("Waiting for Teensy to finish setup...");
-    while (digitalRead(TEENSY_IRQ_IN) == HIGH) {}
+    while (digitalRead(TEENSY_IRQ_IN) == HIGH) {
+        delay(100);
+    }
+    while (digitalRead(TEENSY_IRQ_IN) == LOW) {
+        delay(100);
+    }
     digitalWrite(TEENSY_IRQ_OUT, HIGH);
+    delay(1000);
+    Serial1.println(dataToSendToTeensy); // send to the Teensy the data that was collected during setup
+    delay(1000);
     Serial.println("Teensy setup complete. Continuing.");
     Serial.println("Feather setup complete. Continuing.");
 }
@@ -182,21 +220,21 @@ void loop() {
     // next thing to do is to send the battery voltage every 30 seconds to the Teensy
     if(millis() - timeSinceLastBattUpdate > 30000){
         timeSinceLastBattUpdate = millis(); // reset the timer
-        float measuredvbat = analogRead(VBATPIN); // read the battery voltage
-        measuredvbat *= 2;    // we divided by 2, so multiply back
-        measuredvbat *= 3.3;  // Multiply by 3.3V, our reference voltage
-        measuredvbat /= 1024; // convert to voltage
+        float measured_vbat = analogRead(VBATPIN); // read the battery voltage
+        measured_vbat *= 2;    // we divided by 2, so multiply back
+        measured_vbat *= 3.3;  // Multiply by 3.3V, our reference voltage
+        measured_vbat /= 1024; // convert to voltage
 
-        if(measuredvbat < 3.40){ // if the battery voltage is below 3.4V, stop the module and turn off the battery
-            Serial.println("Battery voltage is low. Stopping.");
+        if(measured_vbat < 3.30){ // if the battery voltage is below 3.4V, stop the module and turn off the battery
+            Serial.println("Battery voltage is low: " + String(measured_vbat) + " Stopping.");
             Serial1.println("x2");
             sendDataToTeensy("vbat:low");
             digitalWrite(BATT_RELAY_PIN, LOW); // turn off the battery
             while(1){}
         }
         Serial.print("VBat: " ); // debug
-        Serial.println(measuredvbat); // debug
-        if(!sendDataToTeensy("vbat:" + String(measuredvbat))){ // send the data to the Teensy
+        Serial.println(measured_vbat); // debug
+        if(!sendDataToTeensy("vbat:" + String(measured_vbat))){ // send the data to the Teensy
             Serial.println("Error sending vbat data to Teensy"); // debug
         }
     }
@@ -289,19 +327,20 @@ void loop() {
     // check the irq pin to see if the Teensy has an interrupt
     // if so, read the data from the serial port and interpret it
 
-    if(digitalRead(TEENSY_IRQ_IN) == HIGH){
+    if(digitalRead(TEENSY_IRQ_IN) == LOW){
         Serial.println("Teensy has an interrupt");
         Serial1.println("ready");
         uint8_t dataInBuf[RH_RF95_MAX_MESSAGE_LEN + 32];
         uint16_t dataInBufLen = 0;
         uint16_t waitCount = 0;
         // wait for Teensy to be ready and to send some data
-        while(Serial1.available() || digitalRead(TEENSY_IRQ_IN) == HIGH){
+        while(Serial1.available() || digitalRead(TEENSY_IRQ_IN) == LOW){
             // if the Teensy is ready, read the data
             while(!Serial1.available()){
                 waitCount++;
                 delay(10);
                 if(waitCount > 100){
+                    waitCount = 0;
                     // if we get here there was a timeout waiting for data and both micros should abort
                     Serial.println("Timeout waiting for Teensy data");
                     Serial1.println("xxxxxxx");
