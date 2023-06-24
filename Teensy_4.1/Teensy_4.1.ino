@@ -278,8 +278,6 @@ void loop() {
                 myLocation.updateLocation(GPS.latitude_fixed, GPS.longitude_fixed);
             }
         }
-
-
     }
     // TODO: handle bluetooth updates
     // TODO: handle encoder updates
