@@ -19,6 +19,8 @@
 // adafruit bluefruit library
 #include <Adafruit_BLE.h>
 #include <Adafruit_BluefruitLE_UART.h>
+#include <Bounce2.h>
+#include <climits>
 
 #define MODULE_STARTUP_WAIT_TIME 15
 
@@ -48,6 +50,7 @@ Adafruit_SSD1306 display(OLED_SCREEN_WIDTH, OLED_SCREEN_HEIGHT, &Wire, OLED_RESE
 Adafruit_GPS GPS(&Serial1);
 Adafruit_BluefruitLE_UART bleSerial(Serial3, BT_MODE_PIN);
 Encoder encoder(ENCODER_A_PIN, ENCODER_B_PIN);
+Button encoderButton = Button();
 
 bool GPS_available = false;
 bool BT_available = false;
@@ -55,12 +58,10 @@ bool BT_available = false;
 bool debugEnabled = false; // this is the flag that determines if debug mode is enabled or not
 
 uint8_t thisDeviceAddress = 0;
-
 String displayTextBuffer[4];
-
 uint8_t GPSserialBuffer[512];
-
 uint32_t myID;
+long encoderPosition = 0;
 
 class MyLocation {
 public:
@@ -143,6 +144,9 @@ void setup() {
     digitalWrite(GPS_EN_PIN, HIGH);
     pinMode(GPS_FIX_PIN, INPUT);
     digitalWrite(LED_PIN, LOW);
+    encoderButton.attach(ENCODER_SW_PIN, INPUT_PULLUP);
+    encoderButton.interval(5);
+    encoderButton.setPressedState(LOW);
     printTextToDisplay("Pins initialized.");
     delay(150);
 
@@ -259,10 +263,9 @@ void loop() {
     delay(1000);
     printStatusLineToDisplay("Looping...");
     // TODO: handle GPS updates
+    // This section may be complete?
     if (GPS_available) {
-        while (GPS.available()) {
-            GPS.read();
-        }
+        if (GPS.available())GPS.read();
         if (GPS.newNMEAreceived()) {
             printStatusLineToDisplay("New NMEA received.");
             GPS.parse(GPS.lastNMEA());
@@ -280,7 +283,36 @@ void loop() {
         }
     }
     // TODO: handle bluetooth updates
+    if (BT_available) {
+
+    }
     // TODO: handle encoder updates
+    long newEncoderPosition = encoder.read();
+    if (newEncoderPosition != encoderPosition) {
+        printStatusLineToDisplay("Encoder update.");
+        Serial.print("Encoder position: ");
+        Serial.println(newEncoderPosition);
+        if(newEncoderPosition == LONG_MAX && encoderPosition == LONG_MIN){ // handle roll over 
+            // encoder moved counterclockwise
+            // TODO: call menu down function
+        }else if (newEncoderPosition == LONG_MIN && encoderPosition == LONG_MAX){ // handle roll over
+            // encoder moved clockwise
+            // TODO: call menu up function
+        }else if (newEncoderPosition > encoderPosition) {
+            // encoder moved clockwise
+            // TODO: call menu up function
+        }else if (newEncoderPosition < encoderPosition) {
+            // encoder moved counterclockwise
+            // TODO: call menu down function
+        }
+        encoderPosition = newEncoderPosition;
+    }
+
+    encoderButton.update();
+    if (encoderButton.pressed()) {
+        // TODO: call menu select function
+    }
+
     // TODO: handle data from Feather
     // TODO: send new location to Feather / other nodes
 }
