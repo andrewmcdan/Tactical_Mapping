@@ -15,7 +15,7 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <Adafruit_GPS.h>
-#include <Encoder.h>
+#include "QuadEncoder.h"
 // adafruit bluefruit library
 #include <Adafruit_BLE.h>
 #include <Adafruit_BluefruitLE_UART.h>
@@ -46,21 +46,21 @@
 
 #define DEBUG_ENABLE_PIN 22
 
-Adafruit_SSD1306 display(OLED_SCREEN_WIDTH, OLED_SCREEN_HEIGHT, &Wire, OLED_RESET);
-Adafruit_GPS GPS(&Serial1);
-Adafruit_BluefruitLE_UART bleSerial(Serial3, BT_MODE_PIN);
-Encoder encoder(ENCODER_A_PIN, ENCODER_B_PIN);
-Button encoderButton = Button();
+Adafruit_SSD1306 display(OLED_SCREEN_WIDTH, OLED_SCREEN_HEIGHT, &Wire, OLED_RESET); // OLED display
+Adafruit_GPS GPS(&Serial1); // GPS module
+Adafruit_BluefruitLE_UART bleSerial(Serial3, BT_MODE_PIN); // bluetooth module
+QuadEncoder encoder(1, ENCODER_A_PIN, ENCODER_B_PIN, 1); // encoder using encoder object 1 on pins 4 and 5 with pullup
+Button encoderButton = Button(); // encoder button
 
-bool GPS_available = false;
-bool BT_available = false;
+bool GPS_available = false; // this is the flag that determines if the GPS is available or not
+bool BT_available = false; // this is the flag that determines if the bluetooth is available or not
 //TODO: remove debug flag
 bool debugEnabled = false; // this is the flag that determines if debug mode is enabled or not
 
-uint8_t thisDeviceAddress = 0;
-String displayTextBuffer[4];
-uint8_t GPSserialBuffer[512];
-uint32_t myID;
+uint8_t thisDeviceAddress = 0; // this is the address of this device
+String displayTextBuffer[4]; // this is the buffer for the display text
+uint8_t GPSserialBuffer[512]; // this is the buffer for the GPS serial data
+uint32_t myID; // 
 long encoderPosition = 0;
 
 class MyLocation {
@@ -135,8 +135,13 @@ void setup() {
     delay(150);
     digitalWrite(LED_PIN, HIGH);
     pinMode(ENCODER_SW_PIN, INPUT_PULLUP);
-    pinMode(ENCODER_A_PIN, INPUT_PULLUP);
-    pinMode(ENCODER_B_PIN, INPUT_PULLUP);
+    // pinMode(ENCODER_A_PIN, INPUT_PULLUP);
+    // pinMode(ENCODER_B_PIN, INPUT_PULLUP);
+    encoder.setInitConfig();  //
+    //encoder.EncConfig.revolutionCountCondition = DISABLE;
+    //encoder.EncConfig.enableModuloCountMode = ENABLE;
+    //encoder.EncConfig.positionModulusValue = 4; 
+    encoder.init();
     pinMode(FEATHER_IRQ_IN_PIN, INPUT);
     pinMode(FEATHER_IRQ_OUT_PIN, OUTPUT);
     digitalWrite(FEATHER_IRQ_OUT_PIN, LOW);
@@ -202,7 +207,7 @@ void setup() {
         while (digitalRead(FEATHER_IRQ_IN_PIN) == HIGH) {
             timeout++;
             delay(1);
-            if (timeout > 60000) {
+            if (timeout > 10000) {
                 Serial.println("Timeout waiting for Feather to boot.");
                 printTextToDisplay("Timeout waiting for");
                 printTextToDisplay("Feather to boot.");
@@ -216,7 +221,7 @@ void setup() {
         while (!FeatherSerial.available()) {
             timeout++;
             delay(1);
-            if (timeout > 10000) {
+            if (timeout > 5000) {
                 Serial.println("Timeout waiting for Feather to boot.");
                 printTextToDisplay("Timeout waiting for");
                 printTextToDisplay("Feather to boot.");
@@ -257,10 +262,10 @@ void setup() {
 }
 
 void loop() {
-    digitalWrite(LED_PIN, HIGH);
-    delay(1500);
-    digitalWrite(LED_PIN, LOW);
-    delay(1000);
+    // digitalWrite(LED_PIN, HIGH);
+    // delay(1500);
+    // digitalWrite(LED_PIN, LOW);
+    // delay(1000);
     printStatusLineToDisplay("Looping...");
     // TODO: handle GPS updates
     // This section may be complete?
@@ -278,7 +283,7 @@ void loop() {
                 Serial.print(", ");
                 Serial.println(GPS.longitude_fixed / 10000000.0, 8);
                 printStatusLineToDisplay("Updating myLocation.");
-                myLocation.updateLocation(GPS.latitude_fixed, GPS.longitude_fixed);
+                myLocation.updateLocation(GPS.latitude_fixed, GPS.longitude_fixed); // update myLocation with new GPS data
             }
         }
     }
@@ -289,28 +294,29 @@ void loop() {
     // TODO: handle encoder updates
     long newEncoderPosition = encoder.read();
     if (newEncoderPosition != encoderPosition) {
-        printStatusLineToDisplay("Encoder update.");
-        Serial.print("Encoder position: ");
-        Serial.println(newEncoderPosition);
-        if(newEncoderPosition == LONG_MAX && encoderPosition == LONG_MIN){ // handle roll over 
-            // encoder moved counterclockwise
-            // TODO: call menu down function
-        }else if (newEncoderPosition == LONG_MIN && encoderPosition == LONG_MAX){ // handle roll over
-            // encoder moved clockwise
-            // TODO: call menu up function
-        }else if (newEncoderPosition > encoderPosition) {
-            // encoder moved clockwise
-            // TODO: call menu up function
-        }else if (newEncoderPosition < encoderPosition) {
-            // encoder moved counterclockwise
-            // TODO: call menu down function
+        if (abs(newEncoderPosition) - abs(encoderPosition) > 1) {
+            printStatusLineToDisplay("Encoder update.");
+            Serial.print("Encoder position: ");
+            Serial.println(newEncoderPosition);
+            if (newEncoderPosition > encoderPosition) {
+                // encoder moved clockwise
+                // TODO: call menu up function
+                printStatusLineToDisplay("Encoder moved clockwise.");
+                encoder.write(0);
+            } else if (newEncoderPosition < encoderPosition || (newEncoderPosition == LONG_MAX && encoderPosition == LONG_MIN)) {
+                // encoder moved counterclockwise
+                // TODO: call menu down function
+                printStatusLineToDisplay("Encoder moved counterclockwise.");
+                encoder.write(0);
+            }
+            encoderPosition = newEncoderPosition = 0;
         }
-        encoderPosition = newEncoderPosition;
     }
 
     encoderButton.update();
     if (encoderButton.pressed()) {
         // TODO: call menu select function
+        printStatusLineToDisplay("Encoder button pressed.");
     }
 
     // TODO: handle data from Feather

@@ -182,7 +182,7 @@ void setup() {
     // if the Teensy gets through its setup, it will set the IRQ pin to low and
     // wait for the Feather to set its IRQ pin to low.
     Serial.println("Give the Teensy time to start...");
-    delay(10000); // give the Teensy time to start up
+    delay(1000); // give the Teensy time to start up
     digitalWrite(TEENSY_IRQ_OUT, LOW);
     delay(100);
     Serial.println("Waiting for Teensy to finish setup...");
