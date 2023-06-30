@@ -401,6 +401,8 @@ void loop() {
 }
 
 bool sendDataToTeensy(String data){
+    // TODO: rewrite this function to do away with interrupt pins
+    //       The Teensy can use a large buffer for the serial port which will allow us to send data without using interrupts
     Serial.println("Sending data to Teensy..."); // debug
     String dataInStr = ""; // the data received from the Teensy
     uint16_t waitCount = 0; // the number of times we have waited for the Teensy to be ready

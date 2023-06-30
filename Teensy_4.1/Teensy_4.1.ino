@@ -320,30 +320,42 @@ void loop() {
     }
 
     // TODO: handle data from Feather
+    static String messageFromFeather = "";
+    if(FeatherSerial.available()){
+        messageFromFeather += FeatherSerial.read();
+    }
+    if(messageFromFeather.endsWith("\n")){
+        Serial.print("Message from Feather: ");
+        Serial.println(messageFromFeather);
+        messageFromFeather = "";
+    }
     // TODO: send new location to Feather / other nodes
+
 }
 
 // print text to the display and shift the text up
 void printTextToDisplay(String text) {
-    displayTextBuffer[0] = displayTextBuffer[1];
-    displayTextBuffer[1] = displayTextBuffer[2];
-    displayTextBuffer[2] = displayTextBuffer[3];
-    displayTextBuffer[3] = text;
-    display.clearDisplay();
-    display.setCursor(0, 0);
-    display.println(displayTextBuffer[0]);
+    displayTextBuffer[0] = displayTextBuffer[1]; // shift the text up
+    displayTextBuffer[1] = displayTextBuffer[2]; // shift the text up
+    displayTextBuffer[2] = displayTextBuffer[3]; // shift the text up
+    displayTextBuffer[3] = text; // add the new text to the bottom
+    display.clearDisplay(); // clear the display
+    display.setCursor(0, 0); // set the cursor to the top left
+    display.println(displayTextBuffer[0]); // print the text to the display line by line from the top 
     display.println(displayTextBuffer[1]);
     display.println(displayTextBuffer[2]);
     display.println(displayTextBuffer[3]);
-    display.display();
+    display.display(); // display the text
 }
 
 void printStatusLineToDisplay(String text) {
-    display.clearDisplay();
-    display.setCursor(0, 0);
-    display.print("-                        ");
-    display.setCursor(0, 0);
+    display.clearDisplay(); // clear the display
+    display.setCursor(0, 0); // set the cursor to the top left
+    display.print("-                        "); // print a blank line
+    display.setCursor(0, 0); // set the cursor to the top left
     display.print("-");
-    display.print(text);
+    display.print(text); 
     display.display();
 }
+
+// TODO: Write a function to send a message to the Feather
