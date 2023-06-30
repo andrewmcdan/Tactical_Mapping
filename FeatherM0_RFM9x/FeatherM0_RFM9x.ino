@@ -39,6 +39,13 @@
 #define MESSAGE_PACKET_TYPE 0xf0
 #define REPEATER_ACTION_REQUEST_PACKET_TYPE 0xa0
 
+// calculate free RAM
+extern "C" char *sbrk(int i);
+size_t freeRAM() {
+  char stack_dummy = 0;
+  return &stack_dummy - sbrk(0);
+}
+
 // Singleton instance of the radio driver
 RH_RF95 rf95(RFM95_CS, RFM95_INT);
 
@@ -198,6 +205,7 @@ void setup() {
     delay(1000);
     Serial.println("Teensy setup complete. Continuing.");
     Serial.println("Feather setup complete. Continuing.");
+    Serial.println("Free memory: " + String(freeRAM()));
 }
 
 void loop() {
@@ -333,6 +341,7 @@ void loop() {
         uint8_t dataInBuf[RH_RF95_MAX_MESSAGE_LEN + 32];
         uint16_t dataInBufLen = 0;
         uint16_t waitCount = 0;
+        Serial.println("Free memory: " + String(freeRAM()));
         // wait for Teensy to be ready and to send some data
         while(Serial1.available() || digitalRead(TEENSY_IRQ_IN) == LOW){
             // if the Teensy is ready, read the data
