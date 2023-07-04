@@ -409,6 +409,8 @@ void loop() {
     }
 }
 
+// function to send data to the Teensy over the serial port 
+// returns true if the data was sent successfully, false otherwise
 bool sendDataToTeensy(String data){
     // TODO: rewrite this function to do away with interrupt pins
     //       The Teensy can use a large buffer for the serial port which will allow us to send data without using interrupts
@@ -444,31 +446,32 @@ bool sendDataToTeensy(String data){
     return true;
 }
 
+// a version of the sendDataToTeensy function that takes a uint8_t array and a length
 bool sendDataToTeensy(uint8_t *data, uint8_t len){ // a version of the sendDataToTeensy function that takes a uint8_t array and a length
-    Serial.println("Sending data to Teensy...");
-    String dataInStr = "";
-    uint16_t waitCount = 0;
-    digitalWrite(TEENSY_IRQ_OUT, LOW);
+    Serial.println("Sending data to Teensy..."); // debug message
+    String dataInStr = ""; // the data received from the Teensy
+    uint16_t waitCount = 0; // the number of times we have waited for the Teensy to be ready
+    digitalWrite(TEENSY_IRQ_OUT, LOW); // set the Teensy IRQ pin to low to tell the Teensy that we are ready to send data
     // wait for Teensy to be ready
-    while(!Serial1.available()){
-        delay(10);
-        waitCount++;
-        if(waitCount > 100){
-            digitalWrite(TEENSY_IRQ_OUT, HIGH);
-            return false;
+    while(!Serial1.available()){ // wait for the Teensy to send "ready"
+        delay(10); // wait 10ms
+        waitCount++; // increment the wait count
+        if(waitCount > 100){ // if we have waited for 1 second and the Teensy has not sent "ready" then we have timed out
+            digitalWrite(TEENSY_IRQ_OUT, HIGH); // set the Teensy IRQ pin to high to tell the Teensy that we are not ready to send data
+            return false; // return false to indicate that we failed to send the data
         }
     }
-    while(Serial1.available()){
-        dataInStr += Serial1.read();
-        if(dataInStr.length() > 5){
-            digitalWrite(TEENSY_IRQ_OUT, HIGH);
-            return false;
+    while(Serial1.available()){ // while there is data available from the Teensy
+        dataInStr += Serial1.read(); // read the data and add it to the dataInStr string
+        if(dataInStr.length() > 5){ // if the dataInStr string is longer than 5 characters
+            digitalWrite(TEENSY_IRQ_OUT, HIGH); // set the Teensy IRQ pin to high to tell the Teensy that we are not ready to send data
+            return false; // return false to indicate that we failed to send the data
         }
     }
-    if(dataInStr == "ready"){
-        Serial1.write(data, len);
-        Serial.println("Data sent to Teensy");
+    if(dataInStr == "ready"){ // if the Teensy has sent "ready"
+        Serial1.write(data, len); // send the data to the Teensy
+        Serial.println("Data sent to Teensy"); // debug message
     }
-    digitalWrite(TEENSY_IRQ_OUT, HIGH);
-    return true;
+    digitalWrite(TEENSY_IRQ_OUT, HIGH); // set the Teensy IRQ pin to high to tell the Teensy that we are not ready to send data
+    return true; // return true to indicate that we successfully sent the data
 }
