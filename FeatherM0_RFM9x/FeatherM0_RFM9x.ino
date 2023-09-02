@@ -287,7 +287,7 @@ void loop() {
             // the message is sent to the Teensy as a packet.
             // the Teensy will decide what to do with the message.
             Serial.println("Sending mesh status update to Teensy...");
-            if(!sendDataToTeensy("meshStatusUpdate:rssi=" + String(rssi) + ":snr=" + String(snr))){ // send the data to the Teensy
+            if(!sendDataToTeensy("meshStatusUpdate:rssi=" + String(rssi) + ";snr=" + String(snr))){ // send the data to the Teensy
                 Serial.println("Error sending mesh status update to Teensy");
             }
         }else if(recvBuf[0] == (MESH_STATUS_PACKET_TYPE & REPEATER_ACTION_REQUEST_PACKET_TYPE)  && toAddr == RH_BROADCAST_ADDRESS){ // repeater action request packet received
@@ -303,7 +303,7 @@ void loop() {
             // the message is sent to the Teensy as a packet.
             // the Teensy will decide what to do with the message.
             Serial.println("Repeater action request packet received. Sending to Teensy...");
-            if(!sendDataToTeensy("repeaterActionRequest:from=" + String(fromAddr) + ":to=" + String(toAddr) + ":id=" + String(recvFromId) + ":flags=" + String(recvFlags) + ":data=")){
+            if(!sendDataToTeensy("repeaterActionRequest:from=" + String(fromAddr) + ";to=" + String(toAddr) + ";id=" + String(recvFromId) + ";flags=" + String(recvFlags) + ";data=")){
                 Serial.println("Failed to send data to Teensy");
             }
             if(!sendDataToTeensy(recvBuf, recvBufLen)){
@@ -323,7 +323,7 @@ void loop() {
             // the message is sent to the Teensy as a packet.
             // the Teensy will decide what to do with the message.
             Serial.println("Message type packet received. Sending to Teensy...");
-            if(!sendDataToTeensy("message:len=" + String(recvBufLen) + ":from=" + String(fromAddr) + ":to=" + String(toAddr) + ":id=" + String(recvFromId) + ":flags=" + String(recvFlags) + ":data=")){
+            if(!sendDataToTeensy("message:len=" + String(recvBufLen) + ";from=" + String(fromAddr) + ";to=" + String(toAddr) + ";id=" + String(recvFromId) + ";flags=" + String(recvFlags) + ";data=")){
                 Serial.println("Failed to send data to Teensy");
             }
             if(!sendDataToTeensy(recvBuf, recvBufLen)){
@@ -415,9 +415,9 @@ bool sendDataToTeensy(String data){
     // TODO: rewrite this function to do away with interrupt pins
     //       The Teensy can use a large buffer for the serial port which will allow us to send data without using interrupts
     Serial.println("Sending data to Teensy..."); // debug
-    String dataInStr = ""; // the data received from the Teensy
-    uint16_t waitCount = 0; // the number of times we have waited for the Teensy to be ready
-    digitalWrite(TEENSY_IRQ_OUT, LOW); // set the Teensy IRQ pin to low to tell the Teensy that we are ready to send data
+    //String dataInStr = ""; // the data received from the Teensy
+    //uint16_t waitCount = 0; // the number of times we have waited for the Teensy to be ready
+    /*digitalWrite(TEENSY_IRQ_OUT, LOW); // set the Teensy IRQ pin to low to tell the Teensy that we are ready to send data
     // wait for Teensy to be ready
     while(!Serial1.available()){ // wait for the Teensy to send "ready"
         delay(10); // wait 10ms
@@ -435,13 +435,13 @@ bool sendDataToTeensy(String data){
             return false; // return false to indicate that we failed to send the data
         }
     }
-    if(dataInStr == "ready"){
+    if(dataInStr == "ready"){*/
         // if we get here, the Teensy is ready to receive data
         Serial1.println(data); // send the data to the Teensy
         Serial.println("Data sent to Teensy"); // debug
-    }
+    /*}
     // set the Teensy IRQ pin to high to tell the Teensy that we are not ready to send data
-    digitalWrite(TEENSY_IRQ_OUT, HIGH);
+    digitalWrite(TEENSY_IRQ_OUT, HIGH);*/
     // return true to indicate that we successfully sent the data
     return true;
 }
@@ -449,7 +449,7 @@ bool sendDataToTeensy(String data){
 // a version of the sendDataToTeensy function that takes a uint8_t array and a length
 bool sendDataToTeensy(uint8_t *data, uint8_t len){ // a version of the sendDataToTeensy function that takes a uint8_t array and a length
     Serial.println("Sending data to Teensy..."); // debug message
-    String dataInStr = ""; // the data received from the Teensy
+    /*String dataInStr = ""; // the data received from the Teensy
     uint16_t waitCount = 0; // the number of times we have waited for the Teensy to be ready
     digitalWrite(TEENSY_IRQ_OUT, LOW); // set the Teensy IRQ pin to low to tell the Teensy that we are ready to send data
     // wait for Teensy to be ready
@@ -468,10 +468,11 @@ bool sendDataToTeensy(uint8_t *data, uint8_t len){ // a version of the sendDataT
             return false; // return false to indicate that we failed to send the data
         }
     }
-    if(dataInStr == "ready"){ // if the Teensy has sent "ready"
+    if(dataInStr == "ready"){ // if the Teensy has sent "ready"*/
         Serial1.write(data, len); // send the data to the Teensy
         Serial.println("Data sent to Teensy"); // debug message
-    }
+    /*}
     digitalWrite(TEENSY_IRQ_OUT, HIGH); // set the Teensy IRQ pin to high to tell the Teensy that we are not ready to send data
+    */
     return true; // return true to indicate that we successfully sent the data
 }

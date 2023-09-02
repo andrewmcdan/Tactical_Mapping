@@ -60,6 +60,7 @@ bool debugEnabled = false; // this is the flag that determines if debug mode is 
 uint8_t thisDeviceAddress = 0; // this is the address of this device
 String displayTextBuffer[4]; // this is the buffer for the display text
 uint8_t GPSserialBuffer[512]; // this is the buffer for the GPS serial data
+uint8_t FeatherSerialBuffer[256]; // this is the buffer for the feather serial data
 uint32_t myID; // 
 long encoderPosition = 0;
 
@@ -117,6 +118,7 @@ void setup() {
         Serial.println("Booting...");
     }
     // initialize the feather serial port
+    FeatherSerial.addMemoryForRead(FeatherSerialBuffer, sizeof(FeatherSerialBuffer));
     FeatherSerial.begin(115200);
     // initialize the OLED
     if (!display.begin(SSD1306_SWITCHCAPVCC, OLED_ADDRESS)) {
