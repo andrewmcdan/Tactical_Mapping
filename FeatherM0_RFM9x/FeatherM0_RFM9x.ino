@@ -63,7 +63,7 @@ size_t freeRAM() {
 // Singleton instance of the radio driver
 RH_RF95 rf95(RFM95_CS, RFM95_INT);
 
-RHDatagram radio(rf95); // starts datagram manager with default address of 0
+RHMesh *meshManager; // this is the mesh manager that will be used to manage the mesh
 
 // This class defines the array that will be used to store incoming messages
 // and provides named access to certain parts of the array / packet.
@@ -109,162 +109,6 @@ uint8_t serialTeensyRecvBuf[1024]; // this is the buffer that will store incomin
 uint16_t serialTeensyRecvBufLen = sizeof(serialTeensyRecvBuf); // this is the length of the buffer that will store incoming data from the Teensy
 bool debugEnabled = false; // this is the flag that determines if debug mode is enabled or not
 bool loneModule = false; // this is the flag that determines if this is the only module or not
-
-class Node{
-private:
-    // the address of the node
-    int nodeAddress;
-    // the next hop to the destination
-    int routeNextHop;
-    int routeHopCount;
-    bool isDirectlyConnected;
-    unsigned long staleness; // the number of milliseconds since the last message was received from this node
-    // when stalenness reaches a certain value, the routeNextHop and routeHopCount should be reset
-
-    int16_t lastRSSI;
-    int lastSNR;
-public:
-    // default constructor
-    Node(){
-        routeNextHop = -1;
-        isDirectlyConnected = false;
-        staleness = 0;
-    }
-    // constructor that takes the address of the node
-    Node(int addr){
-        nodeAddress = addr;
-        routeNextHop = -1;
-        isDirectlyConnected = false;
-        staleness = 0;
-    }
-    // this function will return the address of the node
-    int getNodeAddress(){
-        return nodeAddress;
-    }
-    // this function will return the next hop to the destination
-    int getNextHop(){
-        return routeNextHop;
-    }
-
-    int getHopCount(){
-        return routeHopCount;
-    }
-    void setHopCount(int hopCount){
-        routeHopCount = hopCount;
-        updateStaleness();
-    }
-    // this function will update the routeNextHop variable
-    void updateNextHop(int nextHop){
-        routeNextHop = nextHop;
-        updateStaleness();
-    }
-    bool getIsDirectlyConnected(){
-        return isDirectlyConnected;
-    }
-    void setIsDirectlyConnected(bool isDirectlyConnected_){
-        isDirectlyConnected = isDirectlyConnected_;
-        if(isDirectlyConnected){
-            routeNextHop = -1;
-            routeHopCount = 0;
-        }
-        updateStaleness();
-    }
-
-    void updateStaleness(){
-        staleness = millis();
-    }
-
-    unsigned long getStaleness(){
-        return millis() - staleness;
-    }
-
-    bool isStale(){
-        return millis() - staleness > NODE_MAX_STALENESS;
-    }
-
-    void updateRSSI(int16_t rssi){
-        lastRSSI = rssi;
-        updateStaleness();
-    }
-
-    void updateSNR(int snr){
-        lastSNR = snr;
-        updateStaleness();
-    }
-
-    int16_t getLastRSSI(){
-        return lastRSSI;
-    }
-
-    int getLastSNR(){
-        return lastSNR;
-    }
-};
-
-class Mesh{
-private:
-    std::vector<Node> nodes;
-public:
-    // default constructor
-    Mesh(){
-    }
-    // constructor that takes the address of the first node
-    Mesh(int addr){
-        nodes.push_back(Node(addr));
-    }
-    // this function will add a node to the mesh
-    // returns the number of nodes in the mesh or -1 if the node is already in the mesh
-    int addNode(int addr){
-        if(getNodeIndex(addr) != -1){
-            // if the node is already in the mesh, return -1
-            return -1;
-        }
-        nodes.push_back(Node(addr));
-        //  return the size of the vector
-        return nodes.size() - 1;
-    }
-    // this function will return the address of the node at the given index
-    int getNodeAddress(int index){
-        return nodes.at(index).getNodeAddress();
-    }
-    // this function will return the index of the node with the given address
-    // or -1 if the node is not in the mesh
-    int getNodeIndex(int addr){
-        for(size_t nodeInd = 0; nodeInd < nodes.size(); nodeInd++){
-            if(nodes.at(nodeInd).getNodeAddress() == addr){
-                return nodeInd;
-            }
-        }
-        return -1;
-    }
-    // this function will remove a node from the mesh
-    int removeNode(int index){
-        nodes.erase(nodes.begin() + index);
-        return nodes.size();
-    }
-    // this function takes the address of a node and returns the next hop to that node if
-    // this node is on the route to that node or -1 if there isn't a route to that node.
-    // Returns -2 if the destination is directly connected to this node.
-    int getNextHop(int destination){
-        // find the next hop to the destination
-        for(size_t nodeInd = 0; nodeInd < nodes.size(); nodeInd++){
-            if(nodes.at(nodeInd).getNodeAddress() == destination){
-                return nodes.at(nodeInd).getIsDirectlyConnected()?-2:nodes.at(nodeInd).getNextHop();
-            }
-        }
-        // if we get here, the destination is not in the routeToNode array
-        return -1;
-    }
-
-    Node getNode(int index){
-        return nodes.at(index);
-    }
-};
-
-
-// instantiate the mesh using the maxAddrFound as the address for the first node.
-// The first node in the vector will be this device.
-static Mesh mesh;
 
 void setup() {
     pinMode(LED_BUILTIN, OUTPUT);
@@ -326,8 +170,9 @@ void setup() {
     digitalWrite(RFM95_RST, HIGH);
     delay(100);
     Serial.println("Radio reset complete.");
-    Serial.println("Init radio using datagram manager...");
-    if (!radio.init()) {
+    Serial.println("Init radio using mesh manager...");
+    meshManager = new RHMesh(rf95, address);
+    if (!meshManager->init()) {
         Serial.println("LoRa radio init failed... stopping.");
         dataToSendToTeensy = dataToSendToTeensy + "x1";
         while (1);
@@ -352,51 +197,19 @@ void setup() {
     Serial.print("Setting tramsit power...");
     rf95.setTxPower(23, false);
     Serial.println(" complete.");
+
+
     Serial.println("Start to find other nodes...");
     
-    // TODO: rewrite the radio setup here because we don't need to find other nodes when we set the address using the address pins
-
-    if (!radio.waitAvailableTimeout(45000)) { // if after 45 seconds nothing is received, assume there is no mesh
-        Serial.println("No other nodes found. Setting address = 1");
-        //Serial1.println("addr=1");
-        dataToSendToTeensy = dataToSendToTeensy + "addr=1";
-        radio.setThisAddress(address);
-    } else {
-        // we need to get a mesh status update in order to set this node's address, so keep looping until one comes in
-        Serial.println("Other nodes found. Waiting for mesh status update...");
-        bool meshStatusRecvd = false;
-        while (!meshStatusRecvd) {
-            radio.recvfrom(recvBuf, &recvBufLen, &fromAddr, &toAddr, &recvFromId, &recvFlags);
-            Serial.println("Received data");
-            Serial.print("From: 0x");
-            Serial.println(fromAddr, HEX);
-            Serial.print("To: 0x");
-            Serial.println(toAddr, HEX);
-            Serial.print("ID: 0x");
-            Serial.println(recvFromId, HEX);
-            Serial.print("Flags: 0x");
-            Serial.println(recvFlags, HEX);
-
-            if (recvBufLen == MESH_BEACON_LENGTH && recvBuf[0] == MESH_BEACON_PACKET_TYPE && toAddr == RH_BROADCAST_ADDRESS) {
-                Serial.print("Max address found: 0x");
-                Serial.println(recvBuf[1], HEX);
-                maxAddrFound = recvBuf[1] + 1;
-                Serial1.println("addr=" + String(address));
-                dataToSendToTeensy = dataToSendToTeensy + "addr=" + String(address);
-                radio.setThisAddress(address);
-                meshStatusRecvd = true;
-            }else{
-                Serial.println("Received packet was not a mesh status update. Ignoring.");
-                Serial.println("Waiting for another packet...");
-            }
-        }
+    for(uint8_t i = 0; i < 256; i++){
+        routes[i] = 0;
+        rssi[i] = 0;
     }
 
     Serial.println("Radio setup complete. Continuing...");
 
     // instantiate the mesh using the maxAddrFound as the address for the first node.
     // The first node in the vector will be this device.
-    mesh = Mesh(address);
 
     if(!loneModule){
         // next thing to do is to wait for the Teensy to finish setup. This is done by
@@ -428,23 +241,10 @@ void setup() {
 void loop() {
     //Serial.println("Loop Start\nFree memory: " + String(freeRAM()));
     loopStart = millis();
-    // first thing to do is send out a broadcast that indicates basic mesh status.
-    // each node should do this so that in the event a segment of the mesh gets seperated,
-    // and another node connects to the seperated section, all nodes will connect with
-    // no overlapping addresses.
-    // maxAddrFound - the highest addr of all the nodes
     uint8_t dataOutBufLen = 0;
-    if(millis() - timeSinceMeshUpdate > 15000){ // Only send out a mesh beacon every 15 seconds
-        timeSinceMeshUpdate = millis(); // reset the timer
-        dataOutBuf[dataOutBufLen++] = MESH_BEACON_PACKET_TYPE; // mesh status flag
-        dataOutBuf[dataOutBufLen++] = 0; // the max address found
-        Serial.println("Broadcasting mesh Beacon..."); // debug
-        radio.sendto(dataOutBuf, MESH_BEACON_LENGTH, RH_BROADCAST_ADDRESS); // send the packet
-        dataOutBufLen = 0; // reset the dataOutBufLen
-    }
-
     // next thing to do is to send the battery voltage every 30 seconds to the Teensy
     if(millis() - timeSinceLastBattUpdate > 30000){
+        Serial.println("Loop Start\nFree memory: " + String(freeRAM()));
         timeSinceLastBattUpdate = millis(); // reset the timer
         float measured_vbat = analogRead(VBATPIN); // read the battery voltage
         measured_vbat *= 2;    // we divided by 2, so multiply back
@@ -465,178 +265,7 @@ void loop() {
         }
     }
 
-    // then receive any messages on the waves...
-    // if a message is received, send it to the Teensy.
-    // There is a 1 second timeout on the waitAvailableTimeout function so if the
-    // message is not received, the code will just keep looping.
-    if(radio.available()){
-    //if(radio.waitAvailableTimeout(500)){
-        radio.recvfrom(recvBuf, &recvBufLen, &fromAddr, &toAddr, &recvFromId, &recvFlags); // receive the data
-        Serial.print("Received data from: 0x"); // debug
-        Serial.println(fromAddr, HEX);
-        Serial.print("To: 0x");
-        Serial.println(toAddr, HEX);
-        Serial.print("ID: 0x");
-        Serial.println(recvFromId, HEX);
-        Serial.print("Flags: 0x");
-        Serial.println(recvFlags, HEX);
-        if (recvBufLen == MESH_BEACON_LENGTH && recvBuf.messageType == MESH_BEACON_PACKET_TYPE && toAddr == RH_BROADCAST_ADDRESS) { // if the packet is a mesh status update
-            Serial.println("Mesh status update received. Updating max addr"); // debug
-            Serial.print("Max address: 0x");
-            Serial.println(recvBuf[1], HEX);
-            
-            int16_t rssi = rf95.lastRssi(); // get the RSSI of the last packet received
-            int snr = rf95.lastSNR(); // get the SNR of the last packet received
-
-            // add the node to the mesh
-            if(mesh.addNode(fromAddr) == -1){
-                Serial.println("Address already in the mesh.");
-            }else{
-                Serial.println("Node added to mesh");
-            }
-            int nodeInd = mesh.getNodeIndex(fromAddr);
-            if(nodeInd != -1){
-                mesh.getNode(nodeInd).updateRSSI(rssi);
-                mesh.getNode(nodeInd).updateSNR(snr);
-                mesh.getNode(nodeInd).setIsDirectlyConnected(true);
-            }
-            
-
-            // if the new max addr is greater than the current max addr, update it
-            if(recvBuf[1] > maxAddrFound){
-                maxAddrFound = recvBuf[1];
-            }
-            
-            // need to send an update to the Teensy about RSSI and SNR
-            Serial.print("RSSI: "); // debug
-            Serial.println(rssi);
-            Serial.print("SNR: ");
-            Serial.println(snr);
-            // send the message to the Teensy
-            // the message is sent as a packet with the following format:
-            // meshStatusUpdate:rssi=rssi:snr=snr
-            // where:
-            // rssi - the RSSI of the last packet received
-            // snr - the SNR of the last packet received
-            // the message is sent to the Teensy as a packet.
-            // the Teensy will decide what to do with the message.
-            Serial.println("Sending mesh status update to Teensy...");
-            if(!sendDataToTeensy("meshStatusUpdate:rssi=" + String(rssi) + ";snr=" + String(snr))){ // send the data to the Teensy
-                Serial.println("Error sending mesh status update to Teensy");
-            }
-        }else if(recvBuf.messageType == (MESH_BEACON_PACKET_TYPE & REPEATER_ACTION_REQUEST_PACKET_TYPE)  && toAddr == RH_BROADCAST_ADDRESS){ // repeater action request packet received
-            int16_t rssi = rf95.lastRssi(); // get the RSSI of the last packet received
-            int snr = rf95.lastSNR(); 
-            int nodeInd = mesh.getNodeIndex(fromAddr);
-            if(nodeInd != -1){
-                mesh.getNode(nodeInd).updateRSSI(rssi);
-                mesh.getNode(nodeInd).updateSNR(snr);
-                mesh.getNode(nodeInd).setIsDirectlyConnected(true);
-            }
-            // send the message to the Teensy
-            // the message is sent as a packet with the following format:
-            // repeaterActionRequest:from=from:to=to:id=id:flags=flags:data=data
-            // where:
-            // from - the from address
-            // to - the to address
-            // id - the id of the message
-            // flags - the flags of the message
-            // data - the data of the message
-            // the message is sent to the Teensy as a packet.
-            // the Teensy will decide what to do with the message.
-            Serial.println("Repeater action request packet received. Sending to Teensy...");
-            if(!sendDataToTeensy("repeaterActionRequest:from=" + String(fromAddr) + ";to=" + String(toAddr) + ";id=" + String(recvFromId) + ";flags=" + String(recvFlags) + ";data=")){
-                Serial.println("Failed to send data to Teensy");
-            }
-            if(!sendDataToTeensy(recvBuf, recvBufLen)){
-                Serial.println("Failed to send data to Teensy");
-            }
-        }else if(recvBuf[0] == MESSAGE_PACKET_TYPE && toAddr == mesh.getNode(0).getNodeAddress()){ // message packet received
-            int16_t rssi = rf95.lastRssi(); // get the RSSI of the last packet received
-            int snr = rf95.lastSNR(); 
-            int nodeInd = mesh.getNodeIndex(fromAddr);
-            if(nodeInd != -1){
-                mesh.getNode(nodeInd).updateRSSI(rssi);
-                mesh.getNode(nodeInd).updateSNR(snr);
-                mesh.getNode(nodeInd).setIsDirectlyConnected(true);
-            }
-            // This message, although sent to this device, may be destined for another device.
-            // We need to check the destination address (recvBuf[1]) to see if it is this device or another device.
-            // If it is this device, we need to send the message to the Teensy.
-            // If it is another device, we need to send the message to the next hop.
-
-            // first we need to check if the message is for this device
-            if(recvBuf.destinationAddress == mesh.getNode(0).getNodeAddress()){ // This device
-                // send the message to the Teensy
-                // the message is sent as a packet with the following format:
-                // message:len=length:from=from:to=to:id=id:flags=flags:data=data
-                // where:
-                // length - the length of the data
-                // from - the from address
-                // to - the to address
-                // id - the id of the message
-                // flags - the flags of the message
-                // data - the data of the message
-                // the message is sent to the Teensy as a packet.
-                // the Teensy will decide what to do with the message.
-                Serial.println("Message type packet received. Sending to Teensy...");
-                if(!sendDataToTeensy("message:len=" + String(recvBufLen) + ";from=" + String(fromAddr) + ";to=" + String(toAddr) + ";id=" + String(recvFromId) + ";flags=" + String(recvFlags) + ";data=")){
-                    Serial.println("Failed to send data to Teensy");
-                }
-                if(!sendDataToTeensy(recvBuf, recvBufLen)){
-                    Serial.println("Failed to send data to Teensy");
-                }
-            }else{
-                // if we get here, the message is not for this device
-                // we need to send the message to the next hop
-                // first we need to find the next hop
-                int nextHop = mesh.getNextHop(recvBuf.destinationAddress);
-                if(nextHop == -1){
-                    // if we get here, there is no route to the destination
-                    // we need to send a message to the Teensy to tell it that there is no route to the destination
-                    // the message is sent as a packet with the following format:
-                    // noRouteToDest:from=from:to=to:id=id:flags=flags:data=data
-                    // where:
-                    // from - the from address
-                    // to - the to address
-                    // id - the id of the message
-                    // flags - the flags of the message
-                    // data - the data of the message
-                    // the message is sent to the Teensy as a packet.
-                    // the Teensy will decide what to do with the message.
-                    Serial.println("No route to destination. Sending to Teensy...");
-                    if(!sendDataToTeensy("noRouteToDest:from=" + String(fromAddr) + ";to=" + String(toAddr) + ";id=" + String(recvFromId) + ";flags=" + String(recvFlags) + ";data=")){
-                        Serial.println("Failed to send data to Teensy");
-                    }
-                    if(!sendDataToTeensy(recvBuf, recvBufLen)){
-                        Serial.println("Failed to send data to Teensy");
-                    }
-                }else if(nextHop == -2){
-                    // if we get here, the destination is directly connected to this node
-                    // send it to the node over the radio
-                    Serial.println("Destination is directly connected to this node. Sending to node...");
-                    radio.sendto(recvBuf, recvBufLen, recvBuf.destinationAddress);
-                }
-            }
-
-            // Once we have completed processing, make sure to we check that the return path exists as a route
-            // to the sender. If it does not, we need to add it.
-
-            // First, find the index of the origin node
-            int originNodeInd = mesh.getNodeIndex(recvBuf.originAddress);
-            // if the origin node is not in the mesh, add it
-            if(originNodeInd == -1){
-                Serial.println("Origin node not in mesh. Adding...");
-                mesh.addNode(recvBuf.originAddress);
-                originNodeInd = mesh.getNodeIndex(recvBuf.originAddress);
-            }
-            // Now we update the nextHop and hopCount of the origin node
-            mesh.getNode(originNodeInd).updateNextHop(fromAddr);
-            mesh.getNode(originNodeInd).setHopCount(recvBuf.hopCount + 1);
-            
-            
-        }
-    }
+    
 
     uint16_t serialTeensyDataInBufLen = 0;
 
@@ -705,9 +334,10 @@ void loop() {
 
             // now send the data to the mesh
             Serial.println("Sending data to mesh...");
-            if(!radio.sendto((uint8_t *)serialTeensyRecvBuf + indexOfData, length, RH_BROADCAST_ADDRESS)){
-                Serial.println("Failed to send data to mesh");
-            }
+            // TODO: fix this
+            // if(!radio.sendto((uint8_t *)serialTeensyRecvBuf + indexOfData, length, RH_BROADCAST_ADDRESS)){
+            //     Serial.println("Failed to send data to mesh");
+            // }
         }else if(type == "command"){
             String command = String((char*)serialTeensyRecvBuf + 8, serialTeensyDataInBufLen - 8);
             // now we need to check what the command is
@@ -716,7 +346,8 @@ void loop() {
                 address = command.substring(6).toInt();
                 Serial.println("Address: " + String(address));
                 Serial.println("Setting address...");
-                radio.setThisAddress(address);
+                // TODO: need to set the address of the radio
+                //radio.setThisAddress(address);
                 Serial.println("Address set.");
         }
     }
