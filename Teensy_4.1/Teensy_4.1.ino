@@ -38,7 +38,7 @@
 #define GPS_EN_PIN 3
 #define GPS_FIX_PIN 2
 
-#define BT_MODE_PIN 25
+#define BT_MODE_PIN 23
 
 #define FEATHER_IRQ_IN_PIN 10
 #define FEATHER_IRQ_OUT_PIN 11
@@ -64,7 +64,7 @@ uint8_t FeatherSerialBuffer[256]; // this is the buffer for the feather serial d
 uint32_t myID; // 
 long encoderPosition = 0;
 
-class MyLocation {
+class GPSLocation {
 public:
     int32_t latitude;
     int32_t longitude;
@@ -85,7 +85,7 @@ public:
     }
 };
 
-MyLocation myLocation;
+GPSLocation myLocation;
 
 void setup() {
     randomSeed(analogRead(0));
@@ -198,7 +198,7 @@ void setup() {
     // wait for the Feather to boot
     Serial.println("Give the Feather time to startup...");
     printTextToDisplay("Feather booting...");
-    delay(10000);
+    delay(1000);
     bool featherBooted = false;
     while (!featherBooted) {
         printTextToDisplay("Waiting for Feather...");
@@ -268,23 +268,23 @@ void loop() {
     // delay(1500);
     // digitalWrite(LED_PIN, LOW);
     // delay(1000);
-    printStatusLineToDisplay("Looping...");
+    //printTextToDisplay("Looping...");
     // TODO: handle GPS updates
     // This section may be complete?
     if (GPS_available) {
         if (GPS.available())GPS.read();
         if (GPS.newNMEAreceived()) {
-            printStatusLineToDisplay("New NMEA received.");
+            printTextToDisplay("New NMEA received.");
             GPS.parse(GPS.lastNMEA());
             Serial.print("Fix: ");
             Serial.println((int) GPS.fix);
             if (GPS.fix) {
-                printStatusLineToDisplay("GPS fix.");
+                printTextToDisplay("GPS fix.");
                 Serial.print("Location : ");
                 Serial.print(GPS.latitude_fixed / 10000000.0, 8);
                 Serial.print(", ");
                 Serial.println(GPS.longitude_fixed / 10000000.0, 8);
-                printStatusLineToDisplay("Updating myLocation.");
+                printTextToDisplay("Updating myLocation.");
                 myLocation.updateLocation(GPS.latitude_fixed, GPS.longitude_fixed); // update myLocation with new GPS data
             }
         }
@@ -297,18 +297,18 @@ void loop() {
     long newEncoderPosition = encoder.read();
     if (newEncoderPosition != encoderPosition) {
         if (abs(newEncoderPosition) - abs(encoderPosition) > 1) {
-            printStatusLineToDisplay("Encoder update.");
+            printTextToDisplay("Encoder update.");
             Serial.print("Encoder position: ");
             Serial.println(newEncoderPosition);
             if (newEncoderPosition > encoderPosition) {
                 // encoder moved clockwise
                 // TODO: call menu up function
-                printStatusLineToDisplay("Encoder moved clockwise.");
+                printTextToDisplay("Encoder moved clockwise.");
                 encoder.write(0);
             } else if (newEncoderPosition < encoderPosition || (newEncoderPosition == LONG_MAX && encoderPosition == LONG_MIN)) {
                 // encoder moved counterclockwise
                 // TODO: call menu down function
-                printStatusLineToDisplay("Encoder moved counterclockwise.");
+                printTextToDisplay("Encoder moved counterclockwise.");
                 encoder.write(0);
             }
             encoderPosition = newEncoderPosition = 0;
@@ -318,19 +318,49 @@ void loop() {
     encoderButton.update();
     if (encoderButton.pressed()) {
         // TODO: call menu select function
-        printStatusLineToDisplay("Encoder button pressed.");
+        printTextToDisplay("Encoder button pressed.");
     }
 
     // TODO: handle data from Feather
-    static String messageFromFeather = "";
-    if(FeatherSerial.available()){
-        messageFromFeather += FeatherSerial.read();
+    // create a static char array to hold data coming from the Feather
+    static char messageFromFeather[512];
+    static uint16_t messageFromFeatherLen = 0;
+    while(FeatherSerial.available()){
+        messageFromFeather[messageFromFeatherLen++] = FeatherSerial.read();
+        if(messageFromFeatherLen==512)messageFromFeatherLen = 0;
     }
-    if(messageFromFeather.endsWith("\n")){
+    if(messageFromFeather[messageFromFeatherLen - 1] == '\n'){
         Serial.print("Message from Feather: ");
-        Serial.println(messageFromFeather);
-        messageFromFeather = "";
+        Serial.println(String(messageFromFeather),messageFromFeatherLen));
+        messageFromFeatherLen = 0;
+        // TODO: parse the message from the Feather
+        uint16_t index = 0;
+        String mesType = "";
+        while(messageFromFeather[index] != ':'){
+            mesType += messageFromFeather[index++];
+        }
+        index++; // skip the colon
+        if(mesType.startsWith("vbat")){
+            // message is a battery voltage message
+            // TODO: parse the battery voltage message
+            float vbat = String(messageFromFeather).substring(index).toFloat();
+            Serial.print("Battery voltage: ");
+            Serial.println(vbat);
+            // TODO: if battery voltage is too low shut down the device
+        }else if(mesType.startsWith("meshStatusUpdate")){
+            // message is a meshStatusUpdate message
+            // TODO: parse the meshStatusUpdate message
+        }else if(mesType.startsWith("repeaterActionRequest")){
+            // message is a repeaterActionRequest message
+            // TODO: parse the repeaterActionRequest message
+        }else if(mesType.startsWith("message")){
+            // message is a "message" message
+            // TODO: parse the "message" message
+        }
     }
+    
+
+
     // TODO: send new location to Feather / other nodes
 
 }
@@ -350,14 +380,39 @@ void printTextToDisplay(String text) {
     display.display(); // display the text
 }
 
-void printStatusLineToDisplay(String text) {
-    display.clearDisplay(); // clear the display
-    display.setCursor(0, 0); // set the cursor to the top left
-    display.print("-                        "); // print a blank line
-    display.setCursor(0, 0); // set the cursor to the top left
-    display.print("-");
-    display.print(text); 
-    display.display();
-}
+// void printStatusLineToDisplay(String text) {
+//     //display.clearDisplay(); // clear the display
+//     display.setCursor(0, 0); // set the cursor to the top left
+//     display.print("-                        "); // print a blank line
+//     display.setCursor(0, 0); // set the cursor to the top left
+//     display.print("-");
+//     display.print(text); 
+//     display.display();
+// }
 
 // TODO: Write a function to send a message to the Feather
+
+// Sends a message to the Feather to be sent to the mesh
+void sendMeshMessageToFeather(uint8_t* data, uint16_t len){
+    // set the IRQ pin low
+    digitalWrite(FEATHER_IRQ_OUT_PIN, LOW);
+    // wait for the IRQ in pin to go low
+    while(digitalRead(FEATHER_IRQ_IN_PIN)==HIGH){
+        delay(1);
+    }
+    // send the data
+    FeatherSerial.write(data, len);
+    // wait for the IRQ in pin to go high
+    while(digitalRead(FEATHER_IRQ_IN_PIN)==LOW){
+        delay(1);
+    }
+    // set the IRQ pin high
+    digitalWrite(FEATHER_IRQ_OUT_PIN, HIGH);
+    // delay for a bit just to be safe
+    delay(50);
+}
+
+// Composes a message to be sent to the mesh
+String composeMeshMessage(){
+    return "";
+}
