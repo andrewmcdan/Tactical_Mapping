@@ -10,10 +10,6 @@
 ///      is applied to the USB port.
 
 
-// testing
-
-// testing2
-
 #include <Arduino.h>
 #include <SPI.h>
 #include <RH_RF95.h>
@@ -53,8 +49,6 @@
 #define MESH_BEACON_PACKET_TYPE 0x0f
 #define MESSAGE_PACKET_TYPE 0xf0
 #define REPEATER_ACTION_REQUEST_PACKET_TYPE 0xa0
-
-#define NODE_MAX_STALENESS (1000 * 60 * 5) // 5 minutes
 
 // calculate free RAM
 extern "C" char *sbrk(int i);
@@ -102,8 +96,7 @@ uint8_t toAddr; // this is the address that the message is being sent to
 uint8_t recvFromId; // this is the id of the node that sent the message
 uint8_t recvFlags; // these are the flags that were set when the message was sent
 uint8_t address; // this is the address of this node
-uint8_t routes[256]; // this is the array that will store the routes to the nodes
-int16_t rssi[256]; // this is the array that will store the RSSI of the last packet received from the node
+uint8_t routes[64]; // this is the array that will store the routes to the nodes
 unsigned long loopStart = millis(); // this is the time that the loop started
 unsigned long loopEnd = millis(); // this is the time that the loop ended
 unsigned long timeSinceMeshUpdate = millis(); // this is the time since the last mesh update was received
@@ -138,8 +131,8 @@ void setup() {
     pinMode(DEBUG_ENABLE_PIN, INPUT);
     if(digitalRead(DEBUG_ENABLE_PIN) == LOW) {
         debugEnabled = true;
-        // set address to random value between 1 and 255
-        address = random(1, 255);
+        // set address to random value between 0 and 63, inclusive
+        address = random(0, 64);
     }else{
         // set address using address pins
         address = (digitalRead(ADDR_PIN_0) << 0) | (digitalRead(ADDR_PIN_1) << 1) | (digitalRead(ADDR_PIN_2) << 2) | (digitalRead(ADDR_PIN_3) << 3) | (digitalRead(ADDR_PIN_4) << 4) | (digitalRead(ADDR_PIN_5) << 5));
@@ -200,13 +193,10 @@ void setup() {
     Serial.print("Setting tramsit power...");
     rf95.setTxPower(23, false);
     Serial.println(" complete.");
-
-
-    Serial.println("Start to find other nodes...");
     
+    // reset the routes array
     for(uint8_t i = 0; i < 256; i++){
-        routes[i] = 0;
-        rssi[i] = 0;
+        routes[i] = 255;
     }
 
     Serial.println("Radio setup complete. Continuing...");
