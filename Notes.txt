@@ -1,3 +1,9 @@
+Thoery of operation of the mesh network:
+Low-level operations of the network will be handled by the library. This includes routing messages through the network and maintianing the 
+    mesh network. Because each node will often need to send messages that evntually reach every other node, and the library doesn't send
+    send broadcast messages past one hop, this routing will have to be handled at a high-level.
+
+////////////// OLD ///////////////////
 Data to send in each packet 
     - Packet type byte
         - 0xf0 - message packet

@@ -87,6 +87,49 @@ public:
     }
 };
 
+class SerialDebug{
+private:
+    bool debugEnabled;
+public:
+    SerialDebug(bool debugEnabled){
+        this->debugEnabled = debugEnabled;
+        if(debugEnabled){
+            Serial.begin(115200);
+            while (!Serial) delay(1); // wait for serial port to connect. Needed for native USB
+        }
+    }
+    // default constructor
+    SerialDebug(){}
+
+    template <typename T>
+    void print(const T &data) {
+        if (debugEnabled) {
+            Serial.print(data);
+        }
+    }
+
+    template <typename T>
+    void println(const T &data) {
+        if (debugEnabled) {
+            Serial.println(data);
+        }
+    }
+
+    template <typename T>
+    void print(const T &data, int base) {
+        if (debugEnabled) {
+            Serial.print(data, base);
+        }
+    }
+
+    template <typename T>
+    void println(const T &data, int base) {
+        if (debugEnabled) {
+            Serial.println(data, base);
+        }
+    }
+};
+
 radioRecvMesArray recvBuf; // this is the buffer that the radio will use to store incoming messages
 uint8_t recvBufLen = RH_RF95_MAX_MESSAGE_LEN; // this is the length of the buffer that the radio will use to store incoming messages
 uint8_t fromAddr; // this is the address of the node that sent the message
@@ -103,10 +146,11 @@ unsigned long timeSinceMeshUpdate = millis(); // this is the time since the last
 unsigned long timeSinceLastBattUpdate = millis(); // this is the time since the last battery update was sent
 uint8_t serialTeensyRecvBuf[1024]; // this is the buffer that will store incoming data from the Teensy
 uint16_t serialTeensyRecvBufLen = sizeof(serialTeensyRecvBuf); // this is the length of the buffer that will store incoming data from the Teensy
-bool debugEnabled = false; // this is the flag that determines if debug mode is enabled or not
 bool loneModule = false; // this is the flag that determines if this is the only module or not
+SerialDebug debugSerial;
 
 void setup() {
+    bool debugEnabled = false; // this is the flag that determines if debug mode is enabled or not
     pinMode(LED_BUILTIN, OUTPUT);
     uint8_t waitCount_ = 0;
     // Give the other Teensy time to start up so that 
@@ -135,7 +179,7 @@ void setup() {
         address = random(0, 64);
     }else{
         // set address using address pins
-        address = (digitalRead(ADDR_PIN_0) << 0) | (digitalRead(ADDR_PIN_1) << 1) | (digitalRead(ADDR_PIN_2) << 2) | (digitalRead(ADDR_PIN_3) << 3) | (digitalRead(ADDR_PIN_4) << 4) | (digitalRead(ADDR_PIN_5) << 5));
+        address = (digitalRead(ADDR_PIN_0) << 0) | (digitalRead(ADDR_PIN_1) << 1) | (digitalRead(ADDR_PIN_2) << 2) | (digitalRead(ADDR_PIN_3) << 3) | (digitalRead(ADDR_PIN_4) << 4) | (digitalRead(ADDR_PIN_5) << 5);
     }
 
     // Setup and read the lone module pin
@@ -153,12 +197,7 @@ void setup() {
     delay(100);
     // setup the serial ports
     Serial1.begin(115200);
-    // if(debugEnabled){
-    //     Serial.begin(115200);
-    //     while (!Serial) delay(1); // wait for serial port to connect. Needed for native USB
-    //     Serial.println("Booting...");
-    // }
-    SerialDebug debugSerial = SerialDebug();
+    debugSerial = SerialDebug(debugEnabled);
     delay(100);
     debugSerial.println("Reset radio...");
     // manual reset
@@ -297,7 +336,12 @@ void loop() {
         // command:[command string]
 
         // first we need to check if the data is a command or a message
-        String type = String((char*)serialTeensyRecvBuf,7);
+        char typeBuf[8];
+        for(uint8_t i = 0; i < 7; i++){
+            typeBuf[i] = serialTeensyRecvBuf[i];
+        }
+        typeBuf[7] = '\0';
+        String type = String(typeBuf);
         if(type == "message"){
             // split the serialTeensyRecvBuf array into a length string
             String lengthStr = "";
@@ -333,7 +377,10 @@ void loop() {
             //     Serial.println("Failed to send data to mesh");
             // }
         }else if(type == "command"){
-            String command = String((char*)serialTeensyRecvBuf + 8, serialTeensyDataInBufLen - 8);
+            String command = "";
+            for(uint8_t i = 8; i < serialTeensyDataInBufLen; i++){
+                command += (char)serialTeensyRecvBuf[i];
+            }
             // now we need to check what the command is
             if(command.substring(0, 5) == "addr="){
                 // the command is to set the address of the Feather
@@ -343,6 +390,7 @@ void loop() {
                 // TODO: need to set the address of the radio
                 //radio.setThisAddress(address);
                 debugSerial.println("Address set.");
+            }
         }
     }
 
@@ -373,43 +421,3 @@ bool sendDataToTeensy(uint8_t *data, uint8_t len){ // a version of the sendDataT
     debugSerial.println("Data sent to Teensy"); // debug message
     return true; // return true to indicate that we successfully sent the data
 }
-
-class SerialDebug{
-public:
-    SerialDebug(){
-        if(debugEnabled){
-            Serial.begin(115200);
-            while (!Serial) delay(1); // wait for serial port to connect. Needed for native USB
-        }
-    }
-    void print(void data){
-        if(debugEnabled){
-            Serial.print(data);
-        }
-    }
-    void println(void data){
-        if(debugEnabled){
-            Serial.println(data);
-        }
-    }
-    void write(void data, void len){
-        if(debugEnabled){
-            Serial.write(data, len);
-        }
-    }
-    void write(void data){
-        if(debugEnabled){
-            Serial.write(data);
-        }
-    }
-    void print(void data, void format){
-        if(debugEnabled){
-            Serial.print(data, format);
-        }
-    }
-    void println(void data, void format){
-        if(debugEnabled){
-            Serial.println(data, format);
-        }
-    }
-};
