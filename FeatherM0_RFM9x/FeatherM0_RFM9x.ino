@@ -153,53 +153,54 @@ void setup() {
     delay(100);
     // setup the serial ports
     Serial1.begin(115200);
-    if(debugEnabled){
-        Serial.begin(115200);
-        while (!Serial) delay(1); // wait for serial port to connect. Needed for native USB
-        Serial.println("Booting...");
-    }
+    // if(debugEnabled){
+    //     Serial.begin(115200);
+    //     while (!Serial) delay(1); // wait for serial port to connect. Needed for native USB
+    //     Serial.println("Booting...");
+    // }
+    SerialDebug debugSerial = SerialDebug();
     delay(100);
-    Serial.println("Reset radio...");
+    debugSerial.println("Reset radio...");
     // manual reset
     digitalWrite(RFM95_RST, LOW);
     delay(10);
     digitalWrite(RFM95_RST, HIGH);
     delay(100);
-    Serial.println("Radio reset complete.");
-    Serial.println("Init radio using mesh manager...");
+    debugSerial.println("Radio reset complete.");
+    debugSerial.println("Init radio using mesh manager...");
     meshManager = new RHMesh(rf95, address);
     if (!meshManager->init()) {
-        Serial.println("LoRa radio init failed... stopping.");
+        debugSerial.println("LoRa radio init failed... stopping.");
         dataToSendToTeensy = dataToSendToTeensy + "x1";
         while (1);
     }
-    Serial.println("LoRa radio init OK!");
+    debugSerial.println("LoRa radio init OK!");
     if (!rf95.setFrequency(RF95_FREQ)) {
-        Serial.println("setFrequency failed... stopping");
+        debugSerial.println("setFrequency failed... stopping");
         //Serial1.println("x2");
         dataToSendToTeensy = dataToSendToTeensy + "x2";
         while (1);
     }
-    Serial.print("Freq set to: ");
-    Serial.println(RF95_FREQ);
-    Serial.println("Adjusting modem mode...");
+    debugSerial.print("Freq set to: ");
+    debugSerial.println(RF95_FREQ);
+    debugSerial.println("Adjusting modem mode...");
     if (!rf95.setModemConfig(RH_RF95::ModemConfigChoice::Bw125Cr45Sf128)) {//< Bw = 125 kHz, Cr = 4/5, Sf = 128chips/symbol, CRC on. Default medium range
-        Serial.println("Modem mode set failed... stopping.");
+        debugSerial.println("Modem mode set failed... stopping.");
         //Serial1.println("x3");
         dataToSendToTeensy = dataToSendToTeensy + "x3";
         while (1);
     }
-    Serial.println("Successfully set modem config");
-    Serial.print("Setting tramsit power...");
+    debugSerial.println("Successfully set modem config");
+    debugSerial.print("Setting tramsit power...");
     rf95.setTxPower(23, false);
-    Serial.println(" complete.");
+    debugSerial.println(" complete.");
     
     // reset the routes array
     for(uint8_t i = 0; i < 256; i++){
         routes[i] = 255;
     }
 
-    Serial.println("Radio setup complete. Continuing...");
+    debugSerial.println("Radio setup complete. Continuing...");
 
     // instantiate the mesh using the maxAddrFound as the address for the first node.
     // The first node in the vector will be this device.
@@ -210,11 +211,11 @@ void setup() {
 
         // if the Teensy gets through its setup, it will set the IRQ pin to low and
         // wait for the Feather to set its IRQ pin to low.
-        Serial.println("Give the Teensy time to start...");
+        debugSerial.println("Give the Teensy time to start...");
         //delay(1000); // give the Teensy time to start up
         digitalWrite(TEENSY_IRQ_OUT, LOW);
         delay(100);
-        Serial.println("Waiting for Teensy to finish setup...");
+        debugSerial.println("Waiting for Teensy to finish setup...");
         while (digitalRead(TEENSY_IRQ_IN) == HIGH) {
             delay(100);
         }
@@ -225,10 +226,10 @@ void setup() {
         delay(1000);
         Serial1.println(dataToSendToTeensy); // send to the Teensy the data that was collected during setup
         delay(1000);
-        Serial.println("Teensy setup complete. Continuing.");
+        debugSerial.println("Teensy setup complete. Continuing.");
     }
-    Serial.println("Feather setup complete. Continuing.");
-    Serial.println("Free memory: " + String(freeRAM()));
+    debugSerial.println("Feather setup complete. Continuing.");
+    debugSerial.println("Free memory: " + String(freeRAM()));
 }
 
 void loop() {
@@ -237,7 +238,7 @@ void loop() {
     uint8_t dataOutBufLen = 0;
     // next thing to do is to send the battery voltage every 30 seconds to the Teensy
     if(millis() - timeSinceLastBattUpdate > 30000){
-        Serial.println("Loop Start\nFree memory: " + String(freeRAM()));
+        debugSerial.println("Loop Start\nFree memory: " + String(freeRAM()));
         timeSinceLastBattUpdate = millis(); // reset the timer
         float measured_vbat = analogRead(VBATPIN); // read the battery voltage
         measured_vbat *= 2;    // we divided by 2, so multiply back
@@ -245,16 +246,16 @@ void loop() {
         measured_vbat /= 1024; // convert to voltage
 
         if(measured_vbat < 3.30){ // if the battery voltage is below 3.4V, stop the module and turn off the battery
-            Serial.println("Battery voltage is low: " + String(measured_vbat) + " Stopping.");
+            debugSerial.println("Battery voltage is low: " + String(measured_vbat) + " Stopping.");
             Serial1.println("x2");
             sendDataToTeensy("vbat:low");
             //digitalWrite(BATT_RELAY_PIN, LOW); // turn off the battery
             while(1){}
         }
-        Serial.print("VBat: " ); // debug
-        Serial.println(measured_vbat); // debug
+        debugSerial.print("VBat: " ); // debug
+        debugSerial.println(measured_vbat); // debug
         if(!sendDataToTeensy("vbat:" + String(measured_vbat))){ // send the data to the Teensy
-            Serial.println("Error sending vbat data to Teensy"); // debug
+            debugSerial.println("Error sending vbat data to Teensy"); // debug
         }
     }
 
@@ -263,7 +264,7 @@ void loop() {
     uint16_t serialTeensyDataInBufLen = 0;
 
     if(digitalRead(TEENSY_IRQ_IN) == LOW){
-        Serial.println("Data available from Teensy");
+        debugSerial.println("Data available from Teensy");
         digitalWrite(TEENSY_IRQ_OUT, LOW);
         // keep trying to read data from the Teensy until the Teensy sets the IRQ pin to high
         while(digitalRead(TEENSY_IRQ_IN) == LOW){
@@ -281,9 +282,9 @@ void loop() {
     // Feather needs to send to the mesh.
 
     if(serialTeensyDataInBufLen > 0){
-        Serial.println("Teensy sent some data");
-        Serial.println("Free memory: " + String(freeRAM()));
-        Serial.println("Data received from Teensy: ");
+        debugSerial.println("Teensy sent some data");
+        debugSerial.println("Free memory: " + String(freeRAM()));
+        debugSerial.println("Data received from Teensy: ");
         
         // Now we need to interpret the data
         // the data is sent as a packet with the following format:
@@ -326,7 +327,7 @@ void loop() {
             uint16_t length = lengthStr.toInt();
 
             // now send the data to the mesh
-            Serial.println("Sending data to mesh...");
+            debugSerial.println("Sending data to mesh...");
             // TODO: fix this
             // if(!radio.sendto((uint8_t *)serialTeensyRecvBuf + indexOfData, length, RH_BROADCAST_ADDRESS)){
             //     Serial.println("Failed to send data to mesh");
@@ -337,15 +338,15 @@ void loop() {
             if(command.substring(0, 5) == "addr="){
                 // the command is to set the address of the Feather
                 address = command.substring(6).toInt();
-                Serial.println("Address: " + String(address));
-                Serial.println("Setting address...");
+                debugSerial.println("Address: " + String(address));
+                debugSerial.println("Setting address...");
                 // TODO: need to set the address of the radio
                 //radio.setThisAddress(address);
-                Serial.println("Address set.");
+                debugSerial.println("Address set.");
         }
     }
 
-    //Serial.println("Loop End\nFree memory: " + String(freeRAM()));
+    //debugSerial.println("Loop End\nFree memory: " + String(freeRAM()));
     // wait for a bit before looping again 
     loopEnd = millis();
     //if(loopEnd - loopStart < 100){
@@ -357,18 +358,58 @@ void loop() {
 // returns true if the data was sent successfully, false otherwise
 bool sendDataToTeensy(String data){
     //       The Teensy can use a large buffer for the serial port which will allow us to send data without using interrupts
-    Serial.println("Sending data to Teensy..."); // debug
+    debugSerial.println("Sending data to Teensy..."); // debug
     Serial1.println(data); // send the data to the Teensy
-    Serial.println("Data sent to Teensy"); // debug
+    debugSerial.println("Data sent to Teensy"); // debug
     // return true to indicate that we successfully sent the data
     return true;
 }
 
 // a version of the sendDataToTeensy function that takes a uint8_t array and a length
 bool sendDataToTeensy(uint8_t *data, uint8_t len){ // a version of the sendDataToTeensy function that takes a uint8_t array and a length
-    Serial.println("Sending data to Teensy..."); // debug message
+    debugSerial.println("Sending data to Teensy..."); // debug message
     Serial1.write(data, len); // send the data to the Teensy
     Serial1.println(); // send a newline character to the Teensy
-    Serial.println("Data sent to Teensy"); // debug message
+    debugSerial.println("Data sent to Teensy"); // debug message
     return true; // return true to indicate that we successfully sent the data
 }
+
+class SerialDebug{
+public:
+    SerialDebug(){
+        if(debugEnabled){
+            Serial.begin(115200);
+            while (!Serial) delay(1); // wait for serial port to connect. Needed for native USB
+        }
+    }
+    void print(void data){
+        if(debugEnabled){
+            Serial.print(data);
+        }
+    }
+    void println(void data){
+        if(debugEnabled){
+            Serial.println(data);
+        }
+    }
+    void write(void data, void len){
+        if(debugEnabled){
+            Serial.write(data, len);
+        }
+    }
+    void write(void data){
+        if(debugEnabled){
+            Serial.write(data);
+        }
+    }
+    void print(void data, void format){
+        if(debugEnabled){
+            Serial.print(data, format);
+        }
+    }
+    void println(void data, void format){
+        if(debugEnabled){
+            Serial.println(data, format);
+        }
+    }
+};
