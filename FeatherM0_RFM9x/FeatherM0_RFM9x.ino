@@ -309,7 +309,7 @@ void loop() {
 
             // now add the data to the length string until we find the ':' character
             while(serialTeensyRecvBuf[indexOfData] != ':'){
-                lengthStr += serialTeensyRecvBuf[indexOfData];
+                lengthStr += (char)serialTeensyRecvBuf[indexOfData];
                 indexOfData++;
             }
             // read until we get to the next '=' character
@@ -348,9 +348,9 @@ void loop() {
     //Serial.println("Loop End\nFree memory: " + String(freeRAM()));
     // wait for a bit before looping again 
     loopEnd = millis();
-    if(loopEnd - loopStart < 100){
-        delay(100 - (loopEnd - loopStart));
-    }
+    //if(loopEnd - loopStart < 100){
+    //    delay(100 - (loopEnd - loopStart));
+    //}
 }
 
 // function to send data to the Teensy over the serial port 
