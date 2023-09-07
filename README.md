@@ -1,7 +1,7 @@
 # This project is under construction
 
 # Tactical Mapping Micros
-This repo contains the code that runs on the microcontrollers that are part of my Tactical Mapping project.
+This repo contains the code that runs on the microcontrollers that are part of my Tactical Mapping project. See the ReadMe.md in each section for a deatailed description of that controller's role.
 
 ### Adafruit Feather M0 + LoRa
 - Facilitates communication with the LoRa radio
