@@ -155,14 +155,17 @@ void setup() {
     uint8_t waitCount_ = 0;
     // Give the other Teensy time to start up so that 
     // the IRQ pin is not toggled before the Teensy is ready
-    while(waitCount_ < MODULE_STARTUP_WAIT_TIME){
-        digitalWrite(LED_BUILTIN, HIGH);
-        delay(500);
-        digitalWrite(LED_BUILTIN, LOW);
-        delay(500);
-        waitCount_++;
-    }
-    String dataToSendToTeensy = "";
+    // 
+    // Since we're waiting anyway, might as well set up the pins
+    //
+    // Teensy IRQ pins
+    pinMode(TEENSY_IRQ_IN, INPUT);
+    pinMode(TEENSY_IRQ_OUT, OUTPUT);
+    digitalWrite(TEENSY_IRQ_OUT, HIGH);
+    // Setup the rest of the pins
+    digitalWrite(LED_BUILTIN, HIGH);
+    pinMode(RFM95_RST, OUTPUT);
+    digitalWrite(RFM95_RST, HIGH);
     // setup the radio address pins
     pinMode(ADDR_PIN_0, INPUT);
     pinMode(ADDR_PIN_1, INPUT);
@@ -170,7 +173,6 @@ void setup() {
     pinMode(ADDR_PIN_3, INPUT);
     pinMode(ADDR_PIN_4, INPUT);
     pinMode(ADDR_PIN_5, INPUT);
-
     // Setup and read the debug enable pin
     pinMode(DEBUG_ENABLE_PIN, INPUT);
     if(digitalRead(DEBUG_ENABLE_PIN) == LOW) {
@@ -181,20 +183,22 @@ void setup() {
         // set address using address pins
         address = (digitalRead(ADDR_PIN_0) << 0) | (digitalRead(ADDR_PIN_1) << 1) | (digitalRead(ADDR_PIN_2) << 2) | (digitalRead(ADDR_PIN_3) << 3) | (digitalRead(ADDR_PIN_4) << 4) | (digitalRead(ADDR_PIN_5) << 5);
     }
-
     // Setup and read the lone module pin
     pinMode(DEBUG_LONE_MODULE, INPUT);
     if(digitalRead(DEBUG_LONE_MODULE) == LOW) {
         loneModule = true;
     }
-    // Setup the rest of the pins
-    pinMode(TEENSY_IRQ_IN, INPUT);
-    pinMode(TEENSY_IRQ_OUT, OUTPUT);
-    digitalWrite(TEENSY_IRQ_OUT, HIGH);
-    digitalWrite(LED_BUILTIN, HIGH);
-    pinMode(RFM95_RST, OUTPUT);
-    digitalWrite(RFM95_RST, HIGH);
-    delay(100);
+    // Wait here please (for the Teensy)
+    // If debug is enabled, wait 3 times as long
+    while(waitCount_ < debugEnabled?MODULE_STARTUP_WAIT_TIME*3:MODULE_STARTUP_WAIT_TIME){
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(500);
+        digitalWrite(LED_BUILTIN, LOW);
+        delay(500);
+        waitCount_++;
+    }
+    String dataToSendToTeensy = "";
+    
     // setup the serial ports
     Serial1.begin(115200);
     debugSerial = SerialDebug(debugEnabled);
@@ -240,9 +244,6 @@ void setup() {
     }
 
     debugSerial.println("Radio setup complete. Continuing...");
-
-    // instantiate the mesh using the maxAddrFound as the address for the first node.
-    // The first node in the vector will be this device.
 
     if(!loneModule){
         // next thing to do is to wait for the Teensy to finish setup. This is done by

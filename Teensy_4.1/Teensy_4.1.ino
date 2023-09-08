@@ -22,7 +22,7 @@
 #include <Bounce2.h>
 #include <climits>
 
-#define MODULE_STARTUP_WAIT_TIME 15
+#define MODULE_STARTUP_WAIT_TIME 5
 
 #define LED_PIN 13
 
@@ -90,6 +90,10 @@ GPSLocation myLocation;
 void setup() {
     randomSeed(analogRead(0));
     myID = random(0, uint32_t(-1));
+    // initialize the IRQ pins
+    pinMode(FEATHER_IRQ_IN_PIN, INPUT);
+    pinMode(FEATHER_IRQ_OUT_PIN, OUTPUT);
+    digitalWrite(FEATHER_IRQ_OUT_PIN, LOW);
     // Give the other modules time to start up
     pinMode(LED_PIN, OUTPUT);
     uint8_t waitCount_ = 0;
@@ -144,9 +148,7 @@ void setup() {
     //encoder.EncConfig.enableModuloCountMode = ENABLE;
     //encoder.EncConfig.positionModulusValue = 4; 
     encoder.init();
-    pinMode(FEATHER_IRQ_IN_PIN, INPUT);
-    pinMode(FEATHER_IRQ_OUT_PIN, OUTPUT);
-    digitalWrite(FEATHER_IRQ_OUT_PIN, LOW);
+    
     pinMode(GPS_EN_PIN, OUTPUT);
     digitalWrite(GPS_EN_PIN, HIGH);
     pinMode(GPS_FIX_PIN, INPUT);
