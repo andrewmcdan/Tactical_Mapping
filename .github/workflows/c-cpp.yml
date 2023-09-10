@@ -24,7 +24,7 @@ jobs:
         fqbn: adafruit:samd:adafruit_feather_m0 # default is arduino:avr:uno
     # YAML-format list of library dependencies to install
         libraries: |
-          - RadioHead
+          - name: "RadioHead"
         verbose: true 
         enable-warnings-report: true # default is false
         sketch-paths: |
