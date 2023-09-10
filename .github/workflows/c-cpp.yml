@@ -23,7 +23,9 @@ jobs:
             source-url: "https://adafruit.github.io/arduino-board-index/package_adafruit_index.json"
         fqbn: adafruit:samd:adafruit_feather_m0 # default is arduino:avr:uno
     # YAML-format list of library dependencies to install
-        libraries: RadioHead
+        libraries: |
+          - RadioHead
         verbose: true 
         enable-warnings-report: true # default is false
-        sketch-paths: "./"
+        sketch-paths: |
+          - ./FeatherM0_RFM9x/
