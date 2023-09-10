@@ -22,6 +22,10 @@
 
 #define MODULE_STARTUP_WAIT_TIME 5
 
+#ifndef HEX
+#define HEX 16
+#endif
+
 // Feather M0 w/Radio
 #define RFM95_CS    8
 #define RFM95_INT   3
@@ -45,7 +49,7 @@
 #define DEBUG_ENABLE_PIN 6 // this is the pin that the Feather will use to determine if debug mode should be enabled
 #define DEBUG_LONE_MODULE 13 // this is the pin that the Feather will use to determine if it is the only module
 
-#define MESH_BEACON_LENGTH 2 // the length of the mesh status packet
+#define MAX_NUMBER_OF_NODES 64 // this is the maximum number of nodes that can be on the mesh
 #define MESH_BEACON_PACKET_TYPE 0x0f
 #define MESSAGE_PACKET_TYPE 0xf0
 #define REPEATER_ACTION_REQUEST_PACKET_TYPE 0xa0
@@ -62,6 +66,8 @@ RH_RF95 rf95(RFM95_CS, RFM95_INT);
 
 RHMesh *meshManager; // this is the mesh manager that will be used to manage the mesh
 
+
+
 // This class defines the array that will be used to store incoming messages
 // and provides named access to certain parts of the array / packet.
 class radioRecvMesArray{
@@ -72,6 +78,8 @@ public:
     uint8_t& destinationAddress = data[1];
     uint8_t& originAddress = data[2];
     uint8_t& hopCount = data[3];
+
+    uint8_t* beaconArray = data + 4;
 
     uint8_t& operator[](size_t index){
         if(index < sizeof(data)){
@@ -84,6 +92,74 @@ public:
 
     operator uint8_t*(){
         return data;
+    }
+};
+
+class Routes{
+private:
+    uint8_t routes[MAX_NUMBER_OF_NODES];
+public:
+    Routes(){
+        for(uint8_t i = 0; i < MAX_NUMBER_OF_NODES; i++){
+            routes[i] = 255;
+        }
+    }
+
+    void update(uint8_t* newRoutes){
+        for(uint8_t i = 0; i < MAX_NUMBER_OF_NODES; i++){
+            if(newRoutes[i] != 255) 
+                routes[i] = newRoutes[i];
+        }
+    }
+
+    uint8_t& operator[](size_t index){
+        if(index < sizeof(routes)){
+            return routes[index];
+        }else{
+            return routes[0];
+        }
+        
+    }
+
+    operator uint8_t*(){
+        return routes;
+    }
+};
+
+class BeaconPacket{
+private:
+    uint8_t _data[RH_RF95_MAX_MESSAGE_LEN - 4];
+
+public:
+    uint8_t* routes = _data;
+    // battery voltage
+    float& batteryVoltage = *(float*)(_data + MAX_NUMBER_OF_NODES);
+
+    // create a beacon packet from a radioRecvMesArray object
+    void create(radioRecvMesArray mes){
+        for(uint8_t i = 0; i < sizeof(_data); i++){
+            _data[i] = mes.beaconArray[i];
+        }
+    }
+
+    void create(Routes routes, float voltage){
+        for(uint8_t i = 0; i < MAX_NUMBER_OF_NODES; i++){
+            _data[i] = routes[i];
+        }
+        batteryVoltage = voltage;
+    }
+
+    uint8_t& operator[](size_t index){
+        if(index < sizeof(_data)){
+            return _data[index];
+        }else{
+            return _data[0];
+        }
+        
+    }
+
+    operator uint8_t*(){
+        return _data;
     }
 };
 
@@ -137,12 +213,13 @@ uint8_t dataOutBuf[RH_RF95_MAX_MESSAGE_LEN]; // this is the buffer that the radi
 //uint8_t maxAddrFound = 1; // this is the highest address that has been found on the mesh
 uint8_t toAddr; // this is the address that the message is being sent to
 uint8_t recvFromId; // this is the id of the node that sent the message
+uint8_t destNodeId; // this is the id of the node that the message is being sent to
 uint8_t recvFlags; // these are the flags that were set when the message was sent
 uint8_t address; // this is the address of this node
-uint8_t routes[64]; // this is the array that will store the routes to the nodes
+Routes routes = Routes(); // this is the array that will store the routes to the nodes
 unsigned long loopStart = millis(); // this is the time that the loop started
 unsigned long loopEnd = millis(); // this is the time that the loop ended
-unsigned long timeSinceMeshUpdate = millis(); // this is the time since the last mesh update was received
+unsigned long timeSinceLastBeacon = millis(); // this is the time since the last mesh update was received
 unsigned long timeSinceLastBattUpdate = millis(); // this is the time since the last battery update was sent
 uint8_t serialTeensyRecvBuf[1024]; // this is the buffer that will store incoming data from the Teensy
 uint16_t serialTeensyRecvBufLen = sizeof(serialTeensyRecvBuf); // this is the length of the buffer that will store incoming data from the Teensy
@@ -178,6 +255,7 @@ void setup() {
     if(digitalRead(DEBUG_ENABLE_PIN) == LOW) {
         debugEnabled = true;
         // set address to random value between 0 and 63, inclusive
+        randomSeed(analogRead(0));
         address = random(0, 64);
     }else{
         // set address using address pins
@@ -190,7 +268,7 @@ void setup() {
     }
     // Wait here please (for the Teensy)
     // If debug is enabled, wait 3 times as long
-    while(waitCount_ < debugEnabled?MODULE_STARTUP_WAIT_TIME*3:MODULE_STARTUP_WAIT_TIME){
+    while(waitCount_ < (debugEnabled?MODULE_STARTUP_WAIT_TIME*3:MODULE_STARTUP_WAIT_TIME)){
         digitalWrite(LED_BUILTIN, HIGH);
         delay(500);
         digitalWrite(LED_BUILTIN, LOW);
@@ -239,11 +317,13 @@ void setup() {
     debugSerial.println(" complete.");
     
     // reset the routes array
-    for(uint8_t i = 0; i < 256; i++){
+    for(uint8_t i = 0; i < MAX_NUMBER_OF_NODES; i++){
         routes[i] = 255;
     }
 
     debugSerial.println("Radio setup complete. Continuing...");
+
+    dataToSendToTeensy = dataToSendToTeensy + "addr=" + String(address) + "\n";
 
     if(!loneModule){
         // next thing to do is to wait for the Teensy to finish setup. This is done by
@@ -273,14 +353,16 @@ void setup() {
 }
 
 void loop() {
+    static BeaconPacket beaconPacket;
     //Serial.println("Loop Start\nFree memory: " + String(freeRAM()));
     loopStart = millis();
     uint8_t dataOutBufLen = 0;
     // next thing to do is to send the battery voltage every 30 seconds to the Teensy
+    static float measured_vbat = 0.0;
     if(millis() - timeSinceLastBattUpdate > 30000){
-        debugSerial.println("Loop Start\nFree memory: " + String(freeRAM()));
+        debugSerial.println("Free memory: " + String(freeRAM()));
         timeSinceLastBattUpdate = millis(); // reset the timer
-        float measured_vbat = analogRead(VBATPIN); // read the battery voltage
+        measured_vbat = analogRead(VBATPIN); // read the battery voltage
         measured_vbat *= 2;    // we divided by 2, so multiply back
         measured_vbat *= 3.3;  // Multiply by 3.3V, our reference voltage
         measured_vbat /= 1024; // convert to voltage
@@ -299,7 +381,78 @@ void loop() {
         }
     }
 
+    // send a beacon every 60 seconds
+    if(millis() - timeSinceLastBeacon > 60 * 1000){
+        debugSerial.println("Sending beacon...");
+        debugSerial.println("Free memory: " + String(freeRAM()));
+        timeSinceLastBeacon = millis(); // reset the timer
 
+        beaconPacket.create(routes, measured_vbat);
+        
+        recvBuf.messageType = MESH_BEACON_PACKET_TYPE;
+        recvBuf.destinationAddress = RH_BROADCAST_ADDRESS;
+        recvBuf.originAddress = address;
+        recvBuf.hopCount = 0;
+
+        for(uint8_t i = 0; i < RH_RF95_MAX_MESSAGE_LEN - 4; i++){
+            recvBuf.beaconArray[i] = beaconPacket[i];
+        }
+        // send a beacon to the mesh
+        if(meshManager->sendtoWait(recvBuf, sizeof(recvBuf), RH_BROADCAST_ADDRESS) != RH_ROUTER_ERROR_NONE){
+            debugSerial.println("Failed to send beacon");
+        }else{
+            debugSerial.println("Beacon sent.");
+        }
+    }
+
+    if(meshManager->recvfromAck(recvBuf,&recvBufLen,&recvFromId,&destNodeId)){
+        // we received a message from the mesh
+
+        // print some debug info
+        debugSerial.println("Message received from mesh");
+        debugSerial.println("Free memory: " + String(freeRAM()));
+        debugSerial.print("Message from: 0x");
+        debugSerial.println(recvFromId, HEX);
+        debugSerial.print("Message destination: 0x");
+        debugSerial.println(destNodeId, HEX);
+
+        // check if the message is a beacon
+        // if so, update the entire routes array
+        if(destNodeId == RH_BROADCAST_ADDRESS && recvBuf.messageType == MESH_BEACON_PACKET_TYPE){
+            debugSerial.println("Beacon received");
+            // the message is a beacon
+            // update the routes array
+            beaconPacket.create(recvBuf);
+            routes.update(beaconPacket.routes);
+        }
+
+        // if this message is not a beacon, update the one route for the node that sent the message
+        if(destNodeId != RH_BROADCAST_ADDRESS){
+            // If we want to send a message to the originating node that sent this message, 
+            // we need to send it to the node that sent this message over the wire.
+            routes[recvBuf.originAddress] = recvFromId;
+        }
+
+        if(destNodeId == address){
+            // the message is for this node
+            // print some debug info
+            debugSerial.println("Message is for this node");
+            debugSerial.println("Message type: 0x");
+            debugSerial.println(recvBuf.messageType, HEX);
+            debugSerial.println("Message destination: 0x");
+            debugSerial.println(destNodeId, HEX);
+            debugSerial.println("Message origin: 0x");
+            debugSerial.println(recvBuf.originAddress, HEX);
+            debugSerial.println("Message hop count: ");
+            debugSerial.println(recvBuf.hopCount);
+            debugSerial.println("Message data: ");
+            for(uint8_t i = 4; i < recvBufLen; i++){
+                debugSerial.print((char)recvBuf[i]);
+            }
+            debugSerial.println("");
+            debugSerial.println("Free memory: " + String(freeRAM()));
+        }
+    }
 
     uint16_t serialTeensyDataInBufLen = 0;
 

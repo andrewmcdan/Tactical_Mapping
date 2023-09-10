@@ -70,7 +70,7 @@ public:
     int32_t longitude;
     unsigned long age;
 
-    MyLocation() {
+    GPSLocation() {
         age = millis();
     }
 
@@ -93,7 +93,7 @@ void setup() {
     // initialize the IRQ pins
     pinMode(FEATHER_IRQ_IN_PIN, INPUT);
     pinMode(FEATHER_IRQ_OUT_PIN, OUTPUT);
-    digitalWrite(FEATHER_IRQ_OUT_PIN, LOW);
+    digitalWrite(FEATHER_IRQ_OUT_PIN, HIGH);
     // Give the other modules time to start up
     pinMode(LED_PIN, OUTPUT);
     uint8_t waitCount_ = 0;
@@ -179,7 +179,7 @@ void setup() {
         Serial.println("GPS not available.");
     }
     printTextToDisplay("GPS done.");
-    delay(1000);
+    //delay(1000);
 
     // initialize the bluetooth
     printTextToDisplay("Initializing Bluetooth...");
@@ -200,7 +200,7 @@ void setup() {
     // wait for the Feather to boot
     Serial.println("Give the Feather time to startup...");
     printTextToDisplay("Feather booting...");
-    delay(1000);
+    //delay(1000);
     bool featherBooted = false;
     while (!featherBooted) {
         printTextToDisplay("Waiting for Feather...");
@@ -211,7 +211,7 @@ void setup() {
         while (digitalRead(FEATHER_IRQ_IN_PIN) == HIGH) {
             timeout++;
             delay(1);
-            if (timeout > 10000) {
+            if (timeout > 15000) {
                 Serial.println("Timeout waiting for Feather to boot.");
                 printTextToDisplay("Timeout waiting for");
                 printTextToDisplay("Feather to boot.");
@@ -333,7 +333,8 @@ void loop() {
     }
     if(messageFromFeather[messageFromFeatherLen - 1] == '\n'){
         Serial.print("Message from Feather: ");
-        Serial.println(String(messageFromFeather),messageFromFeatherLen));
+        messageFromFeather[messageFromFeatherLen - 1] = '\0';
+        Serial.println(String(messageFromFeather));
         messageFromFeatherLen = 0;
         // TODO: parse the message from the Feather
         uint16_t index = 0;
