@@ -54,3 +54,7 @@ jobs:
       - uses: arduino/report-size-deltas@v1
         with:
           sketches-reports-source: ${{ env.SKETCHES_REPORTS_PATH }}
+      - uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.SKETCHES_REPORTS_ARTIFACT_NAME }}
+          path: ${{ env.SKETCHES_REPORTS_PATH }}
