@@ -3,10 +3,10 @@ name: C/C++ CI
 on:
   push:
     branches: [ "main" ]
-    paths: [ "FeatherM0_RFM9x" ]
+    paths: [ "FeatherM0_RFM9x/*" ]
   pull_request:
     branches: [ "main" ]
-    paths: [ "FeatherM0_RFM9x" ]
+    paths: [ "FeatherM0_RFM9x/*" ]
 
 jobs:
   build:
