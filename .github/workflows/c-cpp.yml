@@ -28,4 +28,4 @@ jobs:
         verbose: true 
         enable-warnings-report: true # default is false
         sketch-paths: |
-          - ../FeatherM0_RFM9x/
+          - FeatherM0_RFM9x
