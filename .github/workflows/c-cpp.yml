@@ -18,6 +18,9 @@ jobs:
       uses: arduino/compile-sketches@v1.1.0
       with:
     # Full qualified board name, with Boards Manager URL if needed
+        platforms: |
+          - name: "adafruit:samd"
+            source-url: "https://adafruit.github.io/arduino-board-index/package_adafruit_index.json"
         fqbn: adafruit:samd:adafruit_feather_m0 # default is arduino:avr:uno
     # YAML-format list of library dependencies to install
         libraries: RadioHead
