@@ -12,6 +12,10 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+    - uses: actions/upload-artifact@v3
+      with:
+        name: sketches-reports
+        path: sketches-reports
     - name: Compile Arduino Sketches
       uses: arduino/compile-sketches@v1.1.0
       with:
@@ -25,6 +29,6 @@ jobs:
         enable-warnings-report: true
         sketch-paths: |
           - FeatherM0_RFM9x
-        sketches-report-path: "./sketches-reports"
+        sketches-report-path: sketches-reports
         enable-deltas-report: true
         github-token: ${{ secrets.GITHUBTOKEN }}
