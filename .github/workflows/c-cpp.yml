@@ -12,6 +12,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+     # This step makes the contents of the repository available to the workflow
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
     - name: Compile Arduino Sketches
     # You may pin to the exact commit or the version.
     # uses: arduino/compile-sketches@8fd840319c8c9b8617a42cc731092a3350599f35
