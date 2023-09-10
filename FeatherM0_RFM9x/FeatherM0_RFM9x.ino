@@ -382,6 +382,7 @@ void loop() {
     }
 
 
+
     // send a beacon every 60 seconds
     if(millis() - timeSinceLastBeacon > 60 * 1000){
         debugSerial.println("Sending beacon...");

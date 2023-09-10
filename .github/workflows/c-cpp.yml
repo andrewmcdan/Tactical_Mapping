@@ -40,7 +40,7 @@ jobs:
   # When using a matrix to compile for multiple boards, it's necessary to use a separate job for the deltas report
   report:
     needs: build  # Wait for the compile job to finish to get the data for the report
-    #if: github.event_name == 'pull_request' # Only run the job when the workflow is triggered by a pull request
+    # if: github.event_name == 'pull_request' # Only run the job when the workflow is triggered by a pull request
     runs-on: ubuntu-latest
     steps:
       # This step is needed to get the size data produced by the compile jobs
