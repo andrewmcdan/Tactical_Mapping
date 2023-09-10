@@ -1,0 +1,25 @@
+name: C/C++ CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Compile Arduino Sketches
+    # You may pin to the exact commit or the version.
+    # uses: arduino/compile-sketches@8fd840319c8c9b8617a42cc731092a3350599f35
+      uses: arduino/compile-sketches@v1.1.0
+      with:
+    # Full qualified board name, with Boards Manager URL if needed
+        fqbn: adafruit:samd:adafruit_feather_m0 # default is arduino:avr:uno
+    # YAML-format list of library dependencies to install
+        libraries: RadioHead
+        verbose: true 
+        enable-warnings-report: true # default is false
