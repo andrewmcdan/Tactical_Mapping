@@ -1,4 +1,4 @@
-name: C/C++ CI
+name: Build on Commit
 
 on:
   push:
@@ -31,8 +31,10 @@ jobs:
     # YAML-format list of library dependencies to install
         libraries: |
           - name: "RadioHead"
-        verbose: true 
-        enable-warnings-report: true # default is false
+        verbose: true
+        enable-warnings-report: true
         sketch-paths: |
           - FeatherM0_RFM9x
         sketches-report-path: sketches-reports
+        enable-deltas-report: true
+        github-token: ${{ secrets.GITHUBTOKEN }}
