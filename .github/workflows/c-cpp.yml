@@ -1,5 +1,4 @@
 name: Build on Commit
-
 on:
   push:
     branches: [ "main" ]
@@ -7,28 +6,19 @@ on:
   pull_request:
     branches: [ "main" ]
     paths: [ "FeatherM0_RFM9x/*" ]
-
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
     steps:
-     # This step makes the contents of the repository available to the workflow
     - name: Checkout repository
       uses: actions/checkout@v4
-      
     - name: Compile Arduino Sketches
-    # You may pin to the exact commit or the version.
-    # uses: arduino/compile-sketches@8fd840319c8c9b8617a42cc731092a3350599f35
       uses: arduino/compile-sketches@v1.1.0
       with:
-    # Full qualified board name, with Boards Manager URL if needed
         platforms: |
           - name: "adafruit:samd"
             source-url: "https://adafruit.github.io/arduino-board-index/package_adafruit_index.json"
-        fqbn: adafruit:samd:adafruit_feather_m0 # default is arduino:avr:uno
-    # YAML-format list of library dependencies to install
+        fqbn: adafruit:samd:adafruit_feather_m0
         libraries: |
           - name: "RadioHead"
         verbose: true
