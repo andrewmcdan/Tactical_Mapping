@@ -25,6 +25,6 @@ jobs:
         enable-warnings-report: true
         sketch-paths: |
           - FeatherM0_RFM9x
-        sketches-report-path: sketches-reports
+        sketches-report-path: "./sketches-reports"
         enable-deltas-report: true
         github-token: ${{ secrets.GITHUBTOKEN }}

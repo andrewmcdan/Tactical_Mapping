@@ -380,6 +380,7 @@ void loop() {
             debugSerial.println("Error sending vbat data to Teensy"); // debug
         }
     }
+
     
 
     // send a beacon every 60 seconds
