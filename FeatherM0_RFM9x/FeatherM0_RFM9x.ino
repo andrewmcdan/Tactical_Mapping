@@ -215,6 +215,7 @@ uint8_t toAddr; // this is the address that the message is being sent to
 uint8_t recvFromId; // this is the id of the node that sent the message
 uint8_t destNodeId; // this is the id of the node that the message is being sent to
 uint8_t recvFlags; // these are the flags that were set when the message was sent
+uint8_t test[1024];
 uint8_t address; // this is the address of this node
 Routes routes = Routes(); // this is the array that will store the routes to the nodes
 unsigned long loopStart = millis(); // this is the time that the loop started
