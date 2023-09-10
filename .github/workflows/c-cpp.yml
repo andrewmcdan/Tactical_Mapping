@@ -33,4 +33,4 @@ jobs:
         enable-warnings-report: true # default is false
         sketch-paths: |
           - FeatherM0_RFM9x
-        sketches-report-path: "sketches-reports"
+        sketches-report-path: sketches-reports
