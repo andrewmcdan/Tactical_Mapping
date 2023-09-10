@@ -383,7 +383,7 @@ void loop() {
 
     // send a beacon every 60 seconds
     if(millis() - timeSinceLastBeacon > 60 * 1000){
-        debugSerial.prinxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxtln("Sending beacon...");
+        debugSerial.println("Sending beacon...");
         debugSerial.println("Free memory: " + String(freeRAM()));
         timeSinceLastBeacon = millis(); // reset the timer
 
