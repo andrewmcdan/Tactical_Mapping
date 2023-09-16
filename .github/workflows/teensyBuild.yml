@@ -25,7 +25,7 @@ jobs:
             source-url: "https://www.pjrc.com/teensy/package_teensy_index.json"
         fqbn: teensy:avr:teensy40
         libraries: |
-          - name: "Adafruit_GFX_Library"
+          - name: "Adafruit_GFX"
           - name: "Adafruit_SSD1306"
           - name: "Adafruit_GPS"
           - name: "QuadEncoder"
