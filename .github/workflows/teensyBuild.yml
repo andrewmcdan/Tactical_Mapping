@@ -29,7 +29,7 @@ jobs:
           - name: "Adafruit GFX Library"
           - name: "Adafruit SSD1306"
           - name: "Adafruit GPS Library"
-          - name: "QuadEncoder"
+          - name: "Encoder"
           - name: "Adafruit BLE"
           - name: "Adafruit BluefruitLE nRF51"
           - name: "Bounce2"
