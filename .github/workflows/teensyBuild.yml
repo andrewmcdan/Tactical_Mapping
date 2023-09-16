@@ -1,0 +1,64 @@
+name: Build on Commit
+on:
+  push:
+    branches: [ "main" ]
+    paths: [ "Teensy_4.1/*" ]
+  pull_request:
+    branches: [ "main" ]
+    paths: [ "Teensy_4.1/*" ]
+env:
+  # It's convenient to set variables for values used multiple times in the workflow
+  SKETCHES_REPORTS_PATH: sketches-reports
+  SKETCHES_REPORTS_ARTIFACT_NAME: sketches-reports
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Compile Arduino Sketches
+      uses: arduino/compile-sketches@v1.1.0
+      with:
+        platforms: |
+          - name: "teensy:avr"
+            source-url: "https://www.pjrc.com/teensy/package_teensy_index.json"
+        fqbn: teensy:avr:teensy40
+        libraries: |
+          - name: "Adafruit_GFX_Library"
+          - name: "Adafruit_SSD1306"
+          - name: "Adafruit_GPS"
+          - name: "QuadEncoder"
+          - name: "Adafruit_BLE"
+          - name: "Adafruit_BluefruitLE_UART"
+          - name: "Bounce2"
+        verbose: true
+        enable-warnings-report: true
+        sketch-paths: |
+          - Teensy_4.1
+        sketches-report-path: ${{ env.SKETCHES_REPORTS_PATH }}
+        enable-deltas-report: true
+        github-token: ${{ secrets.GITHUBTOKEN }}
+    - uses: actions/upload-artifact@v3
+      with:
+        name: ${{ env.SKETCHES_REPORTS_ARTIFACT_NAME }}
+        path: ${{ env.SKETCHES_REPORTS_PATH }}
+  # When using a matrix to compile for multiple boards, it's necessary to use a separate job for the deltas report
+  report:
+    needs: build  # Wait for the compile job to finish to get the data for the report
+    # if: github.event_name == 'pull_request' # Only run the job when the workflow is triggered by a pull request
+    runs-on: ubuntu-latest
+    steps:
+      # This step is needed to get the size data produced by the compile jobs
+      - name: Download sketches reports artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ env.SKETCHES_REPORTS_ARTIFACT_NAME }}
+          path: ${{ env.SKETCHES_REPORTS_PATH }}
+
+      - uses: arduino/report-size-deltas@v1
+        with:
+          sketches-reports-source: ${{ env.SKETCHES_REPORTS_PATH }}
+        # Idea for what to do next: 
+        # 1. Create another repo to store the reports
+        # 2. Commit the reports to the repo from the workflow
