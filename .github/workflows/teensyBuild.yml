@@ -35,7 +35,7 @@ jobs:
         verbose: true
         enable-warnings-report: true
         sketch-paths: |
-          - Teensy_4.1
+          - Teensy_4.0
         sketches-report-path: ${{ env.SKETCHES_REPORTS_PATH }}
         enable-deltas-report: true
         github-token: ${{ secrets.GITHUBTOKEN }}
