@@ -19,7 +19,7 @@ jobs:
     
     - name: Compile Arduino Sketches
       #uses: arduino/compile-sketches@v1.1.0
-      uses: andrewmcdan/arduino-compile-sketches@v1
+      uses: andrewmcdan/arduino-compile-sketches@v1.1
       with:
         platforms: |
           - name: "teensy:avr"
