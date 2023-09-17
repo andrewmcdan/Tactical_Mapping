@@ -31,7 +31,7 @@ jobs:
           - name: "Adafruit GPS Library"
           - name: "Encoder"
           - name: "Adafruit BluefruitLE nRF51"
-          - name: "Bounce2"
+        #  - name: "Bounce2"
         verbose: true
         enable-warnings-report: true
         sketch-paths: |
