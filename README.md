@@ -7,7 +7,7 @@ This repo contains the code that runs on the microcontrollers that are part of m
 - Facilitates communication with the LoRa radio
 - Communicates with the Teensy 4.1 via serial UART
 
-### Teensy 4.1
+### Teensy 4.0
 - Main microcontroller that facilitates communications between all the modules
 - Provide UI via OLED screen with a rotary encoder for input
 - Communicates with OLED via I2C
