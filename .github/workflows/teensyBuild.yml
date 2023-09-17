@@ -18,7 +18,8 @@ jobs:
       uses: actions/checkout@v4
     
     - name: Compile Arduino Sketches
-      uses: arduino/compile-sketches@v1.1.0
+      #uses: arduino/compile-sketches@v1.1.0
+      uses: andrewmcdan/arduino-compile-sketches
       with:
         platforms: |
           - name: "teensy:avr"
