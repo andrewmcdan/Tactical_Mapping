@@ -56,7 +56,7 @@ jobs:
         cd ${{ env.SKETCHES_REPORTS_PATH }}
         ls -la
         sudo apt-get install jq
-        cat ${{ env.SKETCHES_REPORTS_PATH }}/*.json
+        cat ${{ env.SKETCHES_REPORTS_PATH }}/teensy-avr-teensy40.json
     
     - name: Read JSON and set variables
       run: |
