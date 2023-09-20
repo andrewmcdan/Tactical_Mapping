@@ -59,7 +59,7 @@ jobs:
     
     - name: Read JSON and set variables
       run: |
-        PROJECT_NAME=$(jq -r '.commit_url | split("/")[-2] + "_" + .boards[0].sketches[0].name' build-report/build-report.json)
+        PROJECT_NAME=$(jq -r '.commit_url | split("/")[-2] + "_" + .boards[0].sketches[0].name' ${{ env.SKETCHES_REPORTS_PATH }}/*.json)
         echo "Project Name: $PROJECT_NAME"
         echo "PROJECT_NAME=$PROJECT_NAME" >> $GITHUB_ENV
     
