@@ -39,7 +39,49 @@ jobs:
         sketches-report-path: ${{ env.SKETCHES_REPORTS_PATH }}
         enable-deltas-report: true
         github-token: ${{ secrets.GITHUBTOKEN }}
+    
     - uses: actions/upload-artifact@v3
       with:
         name: ${{ env.SKETCHES_REPORTS_ARTIFACT_NAME }}
         path: ${{ env.SKETCHES_REPORTS_PATH }}
+    
+    - name: Download Artifacts
+      uses: actions/download-artifact@v2
+      with:
+        name: ${{ env.SKETCHES_REPORTS_ARTIFACT_NAME }}
+    
+    - name: Unzip Artifacts
+      run: unzip ${{ env.SKETCHES_REPORTS_ARTIFACT_NAME }}.zip -d build-report/build-report.json
+    
+    - name: Install jq for JSON parsing
+      run: sudo apt-get install jq
+    
+    - name: Read JSON and set variables
+      run: |
+        PROJECT_NAME=$(jq -r '.commit_url | split("/")[-2] + "_" + .boards[0].sketches[0].name' build-report/build-report.json)
+        echo "Project Name: $PROJECT_NAME"
+        echo "PROJECT_NAME=$PROJECT_NAME" >> $GITHUB_ENV
+    
+    - name: Clone ArduinoBuildReports repo
+        run: git clone https://github.com/andrewmcdan/ArduinoBuildReports.git
+
+      - name: Check and create directory if not exists
+        run: |
+          if [[ ! -d "ArduinoBuildReports/$PROJECT_NAME" ]]; then
+            mkdir ArduinoBuildReports/$PROJECT_NAME
+          fi
+
+      - name: Add or update JSON
+        run: cp build-report/build-report.json ArduinoBuildReports/$PROJECT_NAME/
+
+      - name: Commit and Push to ArduinoBuildReports
+        run: |
+          cd ArduinoBuildReports
+          git config user.name "GitHub Action"
+          git config user.email "andrewmcdan@gmail.com"
+          git add .
+          git commit -m "Updated build reports for $PROJECT_NAME"
+          git push
+
+
+
