@@ -65,23 +65,23 @@ jobs:
     - name: Clone ArduinoBuildReports repo
         run: git clone https://github.com/andrewmcdan/ArduinoBuildReports.git
 
-      - name: Check and create directory if not exists
-        run: |
-          if [[ ! -d "ArduinoBuildReports/$PROJECT_NAME" ]]; then
-            mkdir ArduinoBuildReports/$PROJECT_NAME
-          fi
+    - name: Check and create directory if not exists
+      run: |
+        if [[ ! -d "ArduinoBuildReports/$PROJECT_NAME" ]]; then
+          mkdir ArduinoBuildReports/$PROJECT_NAME
+        fi
 
-      - name: Add or update JSON
-        run: cp build-report/build-report.json ArduinoBuildReports/$PROJECT_NAME/
+    - name: Add or update JSON
+      run: cp build-report/build-report.json ArduinoBuildReports/$PROJECT_NAME/
 
-      - name: Commit and Push to ArduinoBuildReports
-        run: |
-          cd ArduinoBuildReports
-          git config user.name "GitHub Action"
-          git config user.email "andrewmcdan@gmail.com"
-          git add .
-          git commit -m "Updated build reports for $PROJECT_NAME"
-          git push
+    - name: Commit and Push to ArduinoBuildReports
+      run: |
+        cd ArduinoBuildReports
+        git config user.name "GitHub Action"
+        git config user.email "andrewmcdan@gmail.com"
+        git add .
+        git commit -m "Updated build reports for $PROJECT_NAME"
+        git push
 
 
 
