@@ -63,7 +63,7 @@ jobs:
         echo "PROJECT_NAME=$PROJECT_NAME" >> $GITHUB_ENV
     
     - name: Clone ArduinoBuildReports repo
-        run: git clone https://github.com/andrewmcdan/ArduinoBuildReports.git
+      run: git clone https://github.com/andrewmcdan/ArduinoBuildReports.git
 
     - name: Check and create directory if not exists
       run: |
