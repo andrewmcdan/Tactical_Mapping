@@ -51,7 +51,11 @@ jobs:
         name: ${{ env.SKETCHES_REPORTS_ARTIFACT_NAME }}
     
     - name: Unzip Artifacts
-      run: unzip ${{ env.SKETCHES_REPORTS_ARTIFACT_NAME }}.zip -d build-report/build-report.json
+      run: |
+        ls -la
+        cd ${{ env.SKETCHES_REPORTS_PATH }}
+        ls -la
+        unzip ${{ env.SKETCHES_REPORTS_PATH }}/${{ env.SKETCHES_REPORTS_ARTIFACT_NAME }}.zip -d build-report/build-report.json
     
     - name: Install jq for JSON parsing
       run: sudo apt-get install jq
