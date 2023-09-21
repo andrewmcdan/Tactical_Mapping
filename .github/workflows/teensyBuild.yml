@@ -72,9 +72,7 @@ jobs:
 
     - name: Add or update JSON
       run: |
-        ls -la
-        ls -la /build-report
-        cp build-report/*.json "ArduinoBuildReports/$PROJECT_NAME/"
+        cp ${{ env.SKETCHES_REPORTS_PATH }}/*.json "ArduinoBuildReports/$PROJECT_NAME/"
 
     - name: Commit and Push to ArduinoBuildReports
       run: |
