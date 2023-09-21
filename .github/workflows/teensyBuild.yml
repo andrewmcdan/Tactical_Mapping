@@ -66,8 +66,11 @@ jobs:
 
     - name: Check and create directory if not exists
       run: |
+        ls -la
+        cd ArduinoBuildReports
+        ls -la
         if [[ ! -d "ArduinoBuildReports/$PROJECT_NAME" ]]; then
-          mkdir ArduinoBuildReports/$PROJECT_NAME
+          mkdir "ArduinoBuildReports/$PROJECT_NAME"
         fi
 
     - name: Add or update JSON
