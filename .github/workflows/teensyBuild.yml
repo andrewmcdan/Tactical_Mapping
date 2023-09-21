@@ -10,6 +10,9 @@ env:
   # It's convenient to set variables for values used multiple times in the workflow
   SKETCHES_REPORTS_PATH: sketches-reports
   SKETCHES_REPORTS_ARTIFACT_NAME: sketches-reports
+  SKETCHES_REPORTS_REPO: ArduinoBuildReports
+  GITHUB_USERNAME: andrewmcdan
+  GITHUB_EMAIL: andrewmcdan@gmail.com
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -55,28 +58,28 @@ jobs:
         echo "Project Name: $PROJECT_NAME"
         echo "PROJECT_NAME=$PROJECT_NAME" >> $GITHUB_ENV
     
-    - name: Clone ArduinoBuildReports repo
+    - name: Clone ${{ env.SKETCHES_REPORTS_REPO }} repo
       run: |
-        git config --global user.name "andrewmcdan"
-        git config --global user.email "andrewmcdan@gmail.com"
+        git config --global user.name ${{ env.GITHUB_USERNAME }}
+        git config --global user.email ${{ env.GITHUB_EMAIL }}
         git config --global credential.helper 'store --file ~/.git-credentials'
         git credential-store --file ~/.git-credentials store
-        echo "https://andrewmcdan:${{ secrets.GITHUBTOKEN }}@github.com" >> ~/.git-credentials
-        git clone https://github.com/andrewmcdan/ArduinoBuildReports.git
+        echo "https://${{ env.GITHUB_USERNAME }}:${{ secrets.GITHUBTOKEN }}@github.com" >> ~/.git-credentials
+        git clone https://github.com/${{ env.GITHUB_USERNAME }}/${{ env.SKETCHES_REPORTS_REPO }}.git
 
     - name: Check and create directory if not exists
       run: |
-        if [[ ! -d "ArduinoBuildReports/$PROJECT_NAME" ]]; then
-          mkdir "ArduinoBuildReports/$PROJECT_NAME"
+        if [[ ! -d "${{ env.SKETCHES_REPORTS_REPO }}/$PROJECT_NAME" ]]; then
+          mkdir "${{ env.SKETCHES_REPORTS_REPO }}/$PROJECT_NAME"
         fi
 
     - name: Add or update JSON
       run: |
-        cp ${{ env.SKETCHES_REPORTS_PATH }}/*.json "ArduinoBuildReports/$PROJECT_NAME/"
+        cp ${{ env.SKETCHES_REPORTS_PATH }}/*.json "${{ env.SKETCHES_REPORTS_REPO }}/$PROJECT_NAME/"
 
-    - name: Commit and Push to ArduinoBuildReports
+    - name: Commit and Push to ${{ env.SKETCHES_REPORTS_REPO }}
       run: |
-        cd ArduinoBuildReports
+        cd ${{ env.SKETCHES_REPORTS_REPO }}
         git add .
         git commit -m "Updated build reports for $PROJECT_NAME"
         git push
