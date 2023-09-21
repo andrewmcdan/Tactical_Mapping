@@ -67,6 +67,7 @@ jobs:
         echo "https://${{ env.GITHUB_USERNAME }}:${{ secrets.GITHUBTOKEN }}@github.com" >> ~/.git-credentials
         LAST_COMMIT_MESSAGE=$(git log -1 --pretty=format:"%s")
         echo "Last Commit Message: $LAST_COMMIT_MESSAGE"
+        echo "LAST_COMMIT_MESSAGE=$LAST_COMMIT_MESSAGE" >> $GITHUB_ENV
         git clone https://github.com/${{ env.GITHUB_USERNAME }}/${{ env.SKETCHES_REPORTS_REPO }}.git
 
     - name: Check and create directory if not exists
