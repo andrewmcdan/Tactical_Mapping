@@ -83,7 +83,7 @@ jobs:
       run: |
         cd ${{ env.SKETCHES_REPORTS_REPO }}
         git add .
-        git commit -m "Updated build reports\n\nProject name: $PROJECT_NAME\n\nLast Commit message: $LAST_COMMIT_MESSAGE"
+        git commit -m "Updated build reports" -m "Project name: $PROJECT_NAME" -m "Last Commit message: $LAST_COMMIT_MESSAGE"
         git push
 
 
