@@ -60,7 +60,8 @@ jobs:
         git config --global user.name "andrewmcdan"
         git config --global user.email "andrewmcdan@gmail.com"
         git config --global credential.helper 'store --file ~/.git-credentials'
-        git credential-store --file ~/.git-credentials store "https://github.com" ${{ secrets.GITHUBTOKEN }}
+        git credential-store --file ~/.git-credentials store
+        echo "https://andrewmcdan:${{ secrets.GITHUBTOKEN }}@github.com" >> ~/.git-credentials
         git clone https://github.com/andrewmcdan/ArduinoBuildReports.git
 
     - name: Check and create directory if not exists
