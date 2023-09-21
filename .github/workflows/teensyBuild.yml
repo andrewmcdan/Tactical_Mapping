@@ -58,7 +58,13 @@ jobs:
         git config --global user.email ${{ env.GITHUB_EMAIL }}
         git config --global credential.helper 'store --file ~/.git-credentials'
         git credential-store --file ~/.git-credentials store
+        
         echo "https://${{ env.GITHUB_USERNAME }}:${{ secrets.GITHUBTOKEN }}@github.com" >> ~/.git-credentials
+
+        LAST_COMMIT_MESSAGE=$(git log -1 --pretty=format:"%s")
+        echo "Last Commit Message: $LAST_COMMIT_MESSAGE"
+        echo "LAST_COMMIT_MESSAGE=$LAST_COMMIT_MESSAGE" >> $GITHUB_ENV
+        git clone https://github.com/${{ env.GITHUB_USERNAME }}/${{ env.SKETCHES_REPORTS_REPO }}.git
         
         json_data=$(cat ${{ env.SKETCHES_REPORTS_PATH }}/*.json)
         num_boards=$(echo $json_data | jq '.boards | length')
@@ -75,12 +81,7 @@ jobs:
 
             echo "Project Name: $project_name"
             echo "PROJECT_NAME=$project_name" >> $GITHUB_ENV
-    
-            LAST_COMMIT_MESSAGE=$(git log -1 --pretty=format:"%s")
-            echo "Last Commit Message: $LAST_COMMIT_MESSAGE"
-            echo "LAST_COMMIT_MESSAGE=$LAST_COMMIT_MESSAGE" >> $GITHUB_ENV
-            git clone https://github.com/${{ env.GITHUB_USERNAME }}/${{ env.SKETCHES_REPORTS_REPO }}.git
-
+            
             if [[ ! -d "${{ env.SKETCHES_REPORTS_REPO }}/$PROJECT_NAME" ]]; then
               mkdir "${{ env.SKETCHES_REPORTS_REPO }}/$PROJECT_NAME"
             fi
@@ -98,4 +99,4 @@ jobs:
 # create a python script to parse the JSON and the markdown Readme of the ArduinoBuildReports repo
 # then update the ReadMe with the latest build reports indicating if the build was successful or not for each project
 
-# also, need to iterate through the json for each of the boards and sketches at line 57 instead of just the first one
+# also, need to iterate through the json for each of the boards and sketches at line 57 instead of just the first one - done
