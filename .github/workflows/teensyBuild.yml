@@ -56,7 +56,10 @@ jobs:
         echo "PROJECT_NAME=$PROJECT_NAME" >> $GITHUB_ENV
     
     - name: Clone ArduinoBuildReports repo
-      run: git clone https://github.com/andrewmcdan/ArduinoBuildReports.git
+      run: |
+        git config user.name "andrewmcdan"
+        git config user.email "andrewmcdan@gmail.com"
+        git clone https://github.com/andrewmcdan/ArduinoBuildReports.git
 
     - name: Check and create directory if not exists
       run: |
@@ -70,7 +73,7 @@ jobs:
     - name: Commit and Push to ArduinoBuildReports
       run: |
         cd ArduinoBuildReports
-        git config user.name "GitHub Action"
+        git config user.name "andrewmcdan"
         git config user.email "andrewmcdan@gmail.com"
         git add .
         git commit -m "Updated build reports for $PROJECT_NAME"
