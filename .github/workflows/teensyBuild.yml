@@ -2,7 +2,7 @@ name: Build on Commit Teensy
 on:
   push:
     branches: [ "main" ]
-    paths: [ "Teensy_4.0/*" ]
+    paths: [ "Teensy_4.0/*","Teensy_4.0TEST/*" ]
   pull_request:
     branches: [ "main" ]
     paths: [ "Teensy_4.0/*" ]
@@ -39,6 +39,7 @@ jobs:
         enable-warnings-report: true
         sketch-paths: |
           - Teensy_4.0
+          - Teensy_4.0TEST
         sketches-report-path: ${{ env.SKETCHES_REPORTS_PATH }}
         enable-deltas-report: true
         github-token: ${{ secrets.GITHUBTOKEN }}
@@ -81,19 +82,18 @@ jobs:
 
             echo "Project Name: $project_name"
             echo "PROJECT_NAME=$project_name" >> $GITHUB_ENV
-            
+
             if [[ ! -d "${{ env.SKETCHES_REPORTS_REPO }}/$PROJECT_NAME" ]]; then
               mkdir "${{ env.SKETCHES_REPORTS_REPO }}/$PROJECT_NAME"
             fi
 
             cp ${{ env.SKETCHES_REPORTS_PATH }}/*.json "${{ env.SKETCHES_REPORTS_REPO }}/$PROJECT_NAME/"
-
-            cd ${{ env.SKETCHES_REPORTS_REPO }}
-            git add .
-            git commit -m "Updated build reports" -m "Project name: $PROJECT_NAME" -m "Last Commit message: $LAST_COMMIT_MESSAGE"
-            git push
           done
         done
+        cd ${{ env.SKETCHES_REPORTS_REPO }}
+        git add .
+        git commit -m "Updated build reports" -m "Project name: $PROJECT_NAME" -m "Last Commit message: $LAST_COMMIT_MESSAGE"
+        git push
 
 # idea for what to do next:
 # create a python script to parse the JSON and the markdown Readme of the ArduinoBuildReports repo
