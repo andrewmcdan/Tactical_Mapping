@@ -54,7 +54,7 @@ jobs:
     
     - name: Read JSON and set variables
       run: |
-        PROJECT_NAME=$(jq -r '(.commit_url | split("/")[-3]) + " - " + .boards[0].sketches[0].name' ${{ env.SKETCHES_REPORTS_PATH }}/*.json)
+        PROJECT_NAME=$(jq -r '(.commit_url | split("/")[-3]) + " - " + .boards[0].sketches[0].name' ${{ env.SKETCHES_REPORTS_PATH }}/*.json)        
         echo "Project Name: $PROJECT_NAME"
         echo "PROJECT_NAME=$PROJECT_NAME" >> $GITHUB_ENV
     
@@ -65,6 +65,9 @@ jobs:
         git config --global credential.helper 'store --file ~/.git-credentials'
         git credential-store --file ~/.git-credentials store
         echo "https://${{ env.GITHUB_USERNAME }}:${{ secrets.GITHUBTOKEN }}@github.com" >> ~/.git-credentials
+        CURRENT_WORKING_DIRECTORY=$(pwd)
+        echo "Current Working Directory: $CURRENT_WORKING_DIRECTORY"
+        ls -la
         git clone https://github.com/${{ env.GITHUB_USERNAME }}/${{ env.SKETCHES_REPORTS_REPO }}.git
 
     - name: Check and create directory if not exists
