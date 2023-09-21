@@ -59,7 +59,8 @@ jobs:
       run: |
         git config --global user.name "andrewmcdan"
         git config --global user.email "andrewmcdan@gmail.com"
-        git remote set-url origin https://x-access-token:${{ secrets.GITHUBTOKEN }}@github.com/andrewmcdan/ArduinoBuildReports.git
+        git config --global credential.helper 'store --file ~/.git-credentials'
+        git credential-store --file ~/.git-credentials store "https://github.com" ${{ secrets.GITHUBTOKEN }}
         git clone https://github.com/andrewmcdan/ArduinoBuildReports.git
 
     - name: Check and create directory if not exists
