@@ -71,7 +71,7 @@ jobs:
         fi
 
     - name: Add or update JSON
-      run: cp build-report/build-report.json ArduinoBuildReports/$PROJECT_NAME/
+      run: cp build-report/*.json "ArduinoBuildReports/$PROJECT_NAME/"
 
     - name: Commit and Push to ArduinoBuildReports
       run: |
