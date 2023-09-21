@@ -57,8 +57,8 @@ jobs:
     
     - name: Clone ArduinoBuildReports repo
       run: |
-        git config user.name "andrewmcdan"
-        git config user.email "andrewmcdan@gmail.com"
+        git config --global user.name "andrewmcdan"
+        git config --global user.email "andrewmcdan@gmail.com"
         git clone https://github.com/andrewmcdan/ArduinoBuildReports.git
 
     - name: Check and create directory if not exists
@@ -73,8 +73,7 @@ jobs:
     - name: Commit and Push to ArduinoBuildReports
       run: |
         cd ArduinoBuildReports
-        git config user.name "andrewmcdan"
-        git config user.email "andrewmcdan@gmail.com"
+        git remote set-url origin https://x-access-token:${{ secrets.GITHUBTOKEN }}@github.com/andrewmcdan/ArduinoBuildReports.git
         git add .
         git commit -m "Updated build reports for $PROJECT_NAME"
         git push
