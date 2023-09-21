@@ -2,7 +2,7 @@ name: Build on Commit Teensy
 on:
   push:
     branches: [ "main" ]
-    paths: [ "Teensy_4.0/*","teensy_4.0TEST/*" ]
+    paths: [ "Teensy_4.0/*" ]
   pull_request:
     branches: [ "main" ]
     paths: [ "Teensy_4.0/*" ]
@@ -39,7 +39,6 @@ jobs:
         enable-warnings-report: true
         sketch-paths: |
           - Teensy_4.0
-          - teensy_4.0TEST
         sketches-report-path: ${{ env.SKETCHES_REPORTS_PATH }}
         enable-deltas-report: true
         github-token: ${{ secrets.GITHUBTOKEN }}
@@ -49,47 +48,41 @@ jobs:
         name: ${{ env.SKETCHES_REPORTS_ARTIFACT_NAME }}
         path: ${{ env.SKETCHES_REPORTS_PATH }}
 
+# The following job is used to commit the build reports to a separate repo. It only works for a single sketch.
     - name: Install jq for JSON parsing
       run: |
         sudo apt-get install jq
-
-    - name: Read JSON, interpret, clone ${{ env.SKETCHES_REPORTS_REPO }}, update, commit, and push
+    
+    - name: Read JSON and set variables
+      run: |
+        PROJECT_NAME=$(jq -r '(.commit_url | split("/")[-3]) + " - " + .boards[0].sketches[0].name' ${{ env.SKETCHES_REPORTS_PATH }}/*.json)        
+        echo "Project Name: $PROJECT_NAME"
+        echo "PROJECT_NAME=$PROJECT_NAME" >> $GITHUB_ENV
+    
+    - name: Clone ${{ env.SKETCHES_REPORTS_REPO }} repo
       run: |
         git config --global user.name ${{ env.GITHUB_USERNAME }}
         git config --global user.email ${{ env.GITHUB_EMAIL }}
         git config --global credential.helper 'store --file ~/.git-credentials'
         git credential-store --file ~/.git-credentials store
-        
         echo "https://${{ env.GITHUB_USERNAME }}:${{ secrets.GITHUBTOKEN }}@github.com" >> ~/.git-credentials
-
         LAST_COMMIT_MESSAGE=$(git log -1 --pretty=format:"%s")
         echo "Last Commit Message: $LAST_COMMIT_MESSAGE"
         echo "LAST_COMMIT_MESSAGE=$LAST_COMMIT_MESSAGE" >> $GITHUB_ENV
         git clone https://github.com/${{ env.GITHUB_USERNAME }}/${{ env.SKETCHES_REPORTS_REPO }}.git
-        
-        json_data=$(cat ${{ env.SKETCHES_REPORTS_PATH }}/*.json)
-        num_boards=$(echo $json_data | jq '.boards | length')
 
-        # loop through all boards
-        for i in $(seq 0 $(($num_boards - 1))); do
-          board=$(echo "$json_data" | jq -r ".boards[$i].board")
-          num_sketches=$(echo "$json_data" | jq ".boards[$i].sketches | length")
+    - name: Check and create directory if not exists
+      run: |
+        if [[ ! -d "${{ env.SKETCHES_REPORTS_REPO }}/$PROJECT_NAME" ]]; then
+          mkdir "${{ env.SKETCHES_REPORTS_REPO }}/$PROJECT_NAME"
+        fi
 
-          # loop through all sketches for each board
-          for j in $(seq 0 $(($num_sketches - 1))); do
-            sketch=$(echo "$json_data" | jq -r ".boards[$i].sketches[$j].name")
-            project_name=$(echo "$json_data" | jq -r '(.commit_url | split("/")[-3]) + " - " + $sketch' --arg board "$board" --arg sketch "$sketch")
+    - name: Add or update JSON
+      run: |
+        cp ${{ env.SKETCHES_REPORTS_PATH }}/*.json "${{ env.SKETCHES_REPORTS_REPO }}/$PROJECT_NAME/"
 
-            echo "Project Name: $project_name"
-            echo "PROJECT_NAME=$project_name" >> $GITHUB_ENV
-
-            if [[ ! -d "${{ env.SKETCHES_REPORTS_REPO }}/$PROJECT_NAME" ]]; then
-              mkdir "${{ env.SKETCHES_REPORTS_REPO }}/$PROJECT_NAME"
-            fi
-
-            cp ${{ env.SKETCHES_REPORTS_PATH }}/*.json "${{ env.SKETCHES_REPORTS_REPO }}/$PROJECT_NAME/"
-          done
-        done
+    - name: Commit and Push to ${{ env.SKETCHES_REPORTS_REPO }}
+      run: |
         cd ${{ env.SKETCHES_REPORTS_REPO }}
         git add .
         git commit -m "Updated build reports" -m "Project name: $PROJECT_NAME" -m "Last Commit message: $LAST_COMMIT_MESSAGE"
@@ -98,5 +91,3 @@ jobs:
 # idea for what to do next:
 # create a python script to parse the JSON and the markdown Readme of the ArduinoBuildReports repo
 # then update the ReadMe with the latest build reports indicating if the build was successful or not for each project
-
-# also, need to iterate through the json for each of the boards and sketches at line 57 instead of just the first one - done
