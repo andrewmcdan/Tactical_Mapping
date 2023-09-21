@@ -65,9 +65,8 @@ jobs:
         git config --global credential.helper 'store --file ~/.git-credentials'
         git credential-store --file ~/.git-credentials store
         echo "https://${{ env.GITHUB_USERNAME }}:${{ secrets.GITHUBTOKEN }}@github.com" >> ~/.git-credentials
-        CURRENT_WORKING_DIRECTORY=$(pwd)
-        echo "Current Working Directory: $CURRENT_WORKING_DIRECTORY"
-        ls -la
+        LAST_COMMIT_MESSAGE=$(git log -1 --pretty=format:"%s")
+        echo "Last Commit Message: $LAST_COMMIT_MESSAGE"
         git clone https://github.com/${{ env.GITHUB_USERNAME }}/${{ env.SKETCHES_REPORTS_REPO }}.git
 
     - name: Check and create directory if not exists
@@ -84,7 +83,7 @@ jobs:
       run: |
         cd ${{ env.SKETCHES_REPORTS_REPO }}
         git add .
-        git commit -m "Updated build reports for $PROJECT_NAME"
+        git commit -m "Updated build reports\n\nProject name: $PROJECT_NAME\n\nLast Commit message: $LAST_COMMIT_MESSAGE"
         git push
 
 
