@@ -2,7 +2,7 @@ name: Build on Commit Teensy
 on:
   push:
     branches: [ "main" ]
-    paths: [ "Teensy_4.0/*","Teensy_4.0TEST/*" ]
+    paths: [ "Teensy_4.0/*","teensy_4.0TEST/*" ]
   pull_request:
     branches: [ "main" ]
     paths: [ "Teensy_4.0/*" ]
@@ -39,7 +39,7 @@ jobs:
         enable-warnings-report: true
         sketch-paths: |
           - Teensy_4.0
-          - Teensy_4.0TEST
+          - teensy_4.0TEST
         sketches-report-path: ${{ env.SKETCHES_REPORTS_PATH }}
         enable-deltas-report: true
         github-token: ${{ secrets.GITHUBTOKEN }}
