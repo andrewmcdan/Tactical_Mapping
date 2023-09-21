@@ -44,19 +44,10 @@ jobs:
       with:
         name: ${{ env.SKETCHES_REPORTS_ARTIFACT_NAME }}
         path: ${{ env.SKETCHES_REPORTS_PATH }}
-    
-    # - name: Download Artifacts
-    #   uses: actions/download-artifact@v2
-    #   with:
-    #     name: ${{ env.SKETCHES_REPORTS_ARTIFACT_NAME }}
 
     - name: Install jq for JSON parsing
       run: |
-        ls -la
-        cd ${{ env.SKETCHES_REPORTS_PATH }}
-        ls -la
         sudo apt-get install jq
-        cat ${{ env.SKETCHES_REPORTS_PATH }}/teensy-avr-teensy40.json
     
     - name: Read JSON and set variables
       run: |
