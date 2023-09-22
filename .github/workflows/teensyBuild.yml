@@ -89,7 +89,7 @@ jobs:
         git push
     - name: debug
       run: |
-        ls -la
+        ls -laR
 
 # idea for what to do next:
 # create a python script to parse the JSON and the markdown Readme of the ArduinoBuildReports repo
