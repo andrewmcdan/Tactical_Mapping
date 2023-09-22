@@ -90,6 +90,7 @@ jobs:
     - name: debug
       run: |
         cd ..
+        cd ..
         ls -la
 
 # idea for what to do next:
