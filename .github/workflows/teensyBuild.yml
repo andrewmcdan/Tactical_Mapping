@@ -52,6 +52,11 @@ jobs:
     - name: Install jq for JSON parsing
       run: |
         sudo apt-get install jq
+    - name: setup python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10' # install the python version needed
+    
     
     - name: Read JSON and set variables
       run: |
@@ -59,7 +64,7 @@ jobs:
         echo "Project Name: $PROJECT_NAME"
         echo "PROJECT_NAME=$PROJECT_NAME" >> $GITHUB_ENV
     
-    - name: Clone ${{ env.SKETCHES_REPORTS_REPO }} repo
+    - name: Clone Sketches Report Repo
       run: |
         git config --global user.name ${{ env.GITHUB_USERNAME }}
         git config --global user.email ${{ env.GITHUB_EMAIL }}
@@ -82,15 +87,14 @@ jobs:
         cp ${{ env.SKETCHES_REPORTS_PATH }}/*.json "${{ env.SKETCHES_REPORTS_REPO }}/$PROJECT_NAME/"
 
     - name: Add or update markdown in ReadMe.md
-      ## TODO: add python script to parse and update ReadMe.md
       run: |
         ls -la
         cd ${{ env.SKETCHES_REPORTS_REPO }}
         echo "WORKFLOW_URL=https://github.com/$GITHUB_REPOSITORY/actions/workflows/$GITHUB_WORKFLOW" >> $GITHUB_ENV
         echo $WORKFLOW_URL
-        ./update_readme.py "$PROJECT_NAME" "$WORKFLOW_URL"
+        python update_readme.py "$PROJECT_NAME" "$WORKFLOW_URL"
 
-    - name: Commit and Push to ${{ env.SKETCHES_REPORTS_REPO }}
+    - name: Commit and Push to Sketches Report Repo
       run: |
         cd ${{ env.SKETCHES_REPORTS_REPO }}
         git add .
