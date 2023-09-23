@@ -87,11 +87,6 @@ jobs:
         git add .
         git commit -m "Updated build reports" -m "Project name: $PROJECT_NAME" -m "Last Commit message: $LAST_COMMIT_MESSAGE"
         git push
-    - name: debug
-      run: |
-        cd ..
-        cd ..
-        ls -la
 
 # idea for what to do next:
 # create a python script to parse the JSON and the markdown Readme of the ArduinoBuildReports repo
