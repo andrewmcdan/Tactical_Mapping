@@ -91,7 +91,7 @@ jobs:
       run: |
         ls -la
         cd ${{ env.SKETCHES_REPORTS_REPO }}
-        WORKFLOW_URL=$(https://github.com/$GITHUB_REPOSITORY/actions/workflows/${{ env.THE_NAME_OF_THIS_FILE }})
+        WORKFLOW_URL="https://github.com/$GITHUB_REPOSITORY/actions/workflows/${{ env.THE_NAME_OF_THIS_FILE }}"
         echo "WORKFLOW_URL=$WORKFLOW_URL" >> $GITHUB_ENV
         echo WORKFLOW_URL
         python update_readme.py "$PROJECT_NAME" "$WORKFLOW_URL"
