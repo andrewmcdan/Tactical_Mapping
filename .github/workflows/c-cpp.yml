@@ -13,6 +13,7 @@ env:
   SKETCHES_REPORTS_REPO: ArduinoBuildReports
   GITHUB_USERNAME: andrewmcdan
   GITHUB_EMAIL: andrewmcdan@gmail.com
+  THE_NAME_OF_THIS_FILE: c-cpp.yml
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -72,6 +73,14 @@ jobs:
     - name: Add or update JSON
       run: |
         cp ${{ env.SKETCHES_REPORTS_PATH }}/*.json "${{ env.SKETCHES_REPORTS_REPO }}/$PROJECT_NAME/"
+
+    - name: Add or update markdown in ReadMe.md
+      run: |
+        cd ${{ env.SKETCHES_REPORTS_REPO }}
+        WORKFLOW_URL="https://github.com/$GITHUB_REPOSITORY/actions/workflows/${{ env.THE_NAME_OF_THIS_FILE }}"
+        echo "WORKFLOW_URL=$WORKFLOW_URL" >> $GITHUB_ENV
+        echo WORKFLOW_URL
+        python update_readme.py "$PROJECT_NAME" "$WORKFLOW_URL"
 
     - name: Commit and Push to ${{ env.SKETCHES_REPORTS_REPO }}
       run: |

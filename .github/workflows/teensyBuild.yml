@@ -89,7 +89,6 @@ jobs:
 
     - name: Add or update markdown in ReadMe.md
       run: |
-        ls -la
         cd ${{ env.SKETCHES_REPORTS_REPO }}
         WORKFLOW_URL="https://github.com/$GITHUB_REPOSITORY/actions/workflows/${{ env.THE_NAME_OF_THIS_FILE }}"
         echo "WORKFLOW_URL=$WORKFLOW_URL" >> $GITHUB_ENV
