@@ -4,10 +4,12 @@
 This repo contains the code that runs on the microcontrollers that are part of my Tactical Mapping project. See the ReadMe.md in each section for a detailed description of that controller's role.
 
 ### Adafruit Feather M0 + LoRa
+[![Build Status of Last Commit](https://github.com/andrewmcdan/Tactical_Mapping/actions/workflows/c-cpp.yml/badge.svg)](https://github.com/andrewmcdan/Tactical_Mapping/actions/workflows/c-cpp.yml)
 - Facilitates communication with the LoRa radio
 - Communicates with the Teensy 4.1 via serial UART
 
 ### Teensy 4.0
+[![Build Status of Last Commit](https://github.com/andrewmcdan/Tactical_Mapping/actions/workflows/teensyBuild.yml/badge.svg)](https://github.com/andrewmcdan/Tactical_Mapping/actions/workflows/teensyBuild.yml)
 - Main microcontroller that facilitates communications between all the modules
 - Provide UI via OLED screen with a rotary encoder for input
 - Communicates with OLED via I2C
