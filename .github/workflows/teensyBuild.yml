@@ -13,6 +13,7 @@ env:
   SKETCHES_REPORTS_REPO: ArduinoBuildReports
   GITHUB_USERNAME: andrewmcdan
   GITHUB_EMAIL: andrewmcdan@gmail.com
+  THE_NAME_OF_THIS_FILE: teensyBuild.yml
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -90,7 +91,7 @@ jobs:
       run: |
         ls -la
         cd ${{ env.SKETCHES_REPORTS_REPO }}
-        echo "WORKFLOW_URL=https://github.com/$GITHUB_REPOSITORY/actions/workflows/$GITHUB_WORKFLOW" >> $GITHUB_ENV
+        echo "WORKFLOW_URL=https://github.com/$GITHUB_REPOSITORY/actions/workflows/${{ env.THE_NAME_OF_THIS_FILE }}" >> $GITHUB_ENV
         echo $WORKFLOW_URL
         python update_readme.py "$PROJECT_NAME" "$WORKFLOW_URL"
 
