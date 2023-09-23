@@ -81,6 +81,13 @@ jobs:
       run: |
         cp ${{ env.SKETCHES_REPORTS_PATH }}/*.json "${{ env.SKETCHES_REPORTS_REPO }}/$PROJECT_NAME/"
 
+    - name: Add or update markdown in ReadMe.md
+      ## TODO: add python script to parse and update ReadMe.md
+      run: |
+        la -la
+        echo "WORKFLOW_URL=https://github.com/$GITHUB_REPOSITORY/actions/workflows/$(basename $GITHUB_WORKFLOW)" >> $GITHUB_ENV
+        ./update_readme.py "$PROJECT_NAME" "$WORKFLOW_URL"
+
     - name: Commit and Push to ${{ env.SKETCHES_REPORTS_REPO }}
       run: |
         cd ${{ env.SKETCHES_REPORTS_REPO }}
