@@ -84,7 +84,7 @@ jobs:
     - name: Add or update markdown in ReadMe.md
       ## TODO: add python script to parse and update ReadMe.md
       run: |
-        la -la
+        ls -la
         echo "WORKFLOW_URL=https://github.com/$GITHUB_REPOSITORY/actions/workflows/$(basename $GITHUB_WORKFLOW)" >> $GITHUB_ENV
         ./update_readme.py "$PROJECT_NAME" "$WORKFLOW_URL"
 
