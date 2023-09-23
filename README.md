@@ -15,7 +15,10 @@ This repo contains the code that runs on the microcontrollers that are part of m
 - Communicates with OLED via I2C
 - Communicates with GPS module via serial UART
 - Communicates with BLE module via serial UART
+
 The auto-build action that runs each time I push new code to the repo results in an artifact file that is available for me to download. The artifact includes a json file that is a report of the memory usage for the sketch and also the hex file that was compiled.  
+
+## A note on modules
 
 GPS and / or BLE modules may not be present in a given configuration. In the case of a beacon (which would be deployed without a person/phone nearby), there's no reason to waste power on the BLE module. For units that carry the device with them, and have an accompanying phone, the phone can provide GPS location, and thus there is no reason for there to be a GPS module. 
 
