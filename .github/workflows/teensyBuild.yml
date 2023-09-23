@@ -85,7 +85,9 @@ jobs:
       ## TODO: add python script to parse and update ReadMe.md
       run: |
         ls -la
-        echo "WORKFLOW_URL=https://github.com/$GITHUB_REPOSITORY/actions/workflows/$(basename $GITHUB_WORKFLOW)" >> $GITHUB_ENV
+        cd ${{ env.SKETCHES_REPORTS_REPO }}
+        echo "WORKFLOW_URL=https://github.com/$GITHUB_REPOSITORY/actions/workflows/$GITHUB_WORKFLOW" >> $GITHUB_ENV
+        echo $WORKFLOW_URL
         ./update_readme.py "$PROJECT_NAME" "$WORKFLOW_URL"
 
     - name: Commit and Push to ${{ env.SKETCHES_REPORTS_REPO }}
