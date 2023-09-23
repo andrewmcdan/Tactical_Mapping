@@ -53,9 +53,9 @@ jobs:
       run: |
         sudo apt-get install jq
     - name: setup python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10' # install the python version needed
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10' # install the python version needed
     
     
     - name: Read JSON and set variables
