@@ -66,8 +66,6 @@ RH_RF95 rf95(RFM95_CS, RFM95_INT);
 
 RHMesh *meshManager; // this is the mesh manager that will be used to manage the mesh
 
-
-
 // This class defines the array that will be used to store incoming messages
 // and provides named access to certain parts of the array / packet.
 class radioRecvMesArray{
@@ -87,9 +85,7 @@ public:
         }else{
             return data[0];
         }
-        
     }
-
     operator uint8_t*(){
         return data;
     }
@@ -380,8 +376,6 @@ void loop() {
             debugSerial.println("Error sending vbat data to Teensy"); // debug
         }
     }
-
-
 
     // send a beacon every 60 seconds
     if(millis() - timeSinceLastBeacon > 60 * 1000){
